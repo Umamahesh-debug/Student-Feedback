@@ -411,6 +411,25 @@ const AdminDashboard = () => {
           .report-header .course-code { color: #6366f1; font-weight: 600; font-size: 16px; }
           .report-header .meta { color: #64748b; font-size: 14px; margin-top: 10px; }
           .report-description { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #6366f1; }
+          .analysis-section { background: #eef6ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 18px; margin-bottom: 24px; }
+          .analysis-title { color: #0c4a6e; font-size: 20px; margin-bottom: 14px; }
+          .analysis-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+          .analysis-stat { background: #ffffff; border-radius: 10px; padding: 12px 14px; min-width: 120px; text-align: center; border: 1px solid #e2e8f0; }
+          .analysis-stat .value { font-size: 28px; font-weight: 700; color: #0f172a; }
+          .analysis-stat .label { color: #64748b; font-size: 12px; }
+          .analysis-block { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-top: 12px; }
+          .analysis-block h3 { color: #0f4c75; font-size: 17px; margin-bottom: 8px; }
+          .simple-rows { display: flex; flex-direction: column; gap: 7px; }
+          .simple-row { display: flex; align-items: center; gap: 10px; }
+          .simple-row .name { width: 120px; color: #334155; font-size: 13px; }
+          .simple-row .bar { flex: 1; height: 10px; background: #e2e8f0; border-radius: 8px; overflow: hidden; }
+          .simple-row .fill { height: 100%; background: linear-gradient(90deg, #10b981, #34d399); }
+          .simple-row .score { width: 45px; text-align: right; color: #0f172a; font-weight: 700; font-size: 13px; }
+          .improvement-list { margin: 0; padding-left: 16px; color: #334155; }
+          .improvement-list li { margin-bottom: 6px; }
+          .questions-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          .questions-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+          .questions-table td:last-child { text-align: right; font-weight: 700; }
           .day-section { margin-bottom: 30px; page-break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
           .day-header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 15px 20px; }
           .day-header h2 { font-size: 18px; margin-bottom: 5px; }
@@ -453,6 +472,57 @@ const AdminDashboard = () => {
           </div>
         </div>
         ${fullReportData.description ? `<div class="report-description">${fullReportData.description}</div>` : ''}
+        ${fullReportData.aiAnalysis ? `
+          <div class="analysis-section">
+            <div class="analysis-title">AI-Powered Feedback Analysis</div>
+            <div class="analysis-stats">
+              <div class="analysis-stat"><div class="value">${fullReportData.aiAnalysis.totalFeedbacks || 0}</div><div class="label">Total Feedbacks</div></div>
+              <div class="analysis-stat"><div class="value">${fullReportData.aiAnalysis.averageDayRating > 0 ? `${fullReportData.aiAnalysis.averageDayRating}★` : 'N/A'}</div><div class="label">Avg Day Rating</div></div>
+              <div class="analysis-stat"><div class="value">${fullReportData.aiAnalysis.averageQuestionRating > 0 ? `${fullReportData.aiAnalysis.averageQuestionRating}/5` : 'N/A'}</div><div class="label">Avg Question Rating</div></div>
+              <div class="analysis-stat"><div class="value">${fullReportData.aiAnalysis.positivePercent || 0}%</div><div class="label">Positive</div></div>
+            </div>
+
+            ${fullReportData.aiAnalysis.categoryPerformance && fullReportData.aiAnalysis.categoryPerformance.length > 0 ? `
+              <div class="analysis-block">
+                <h3>Performance by Category</h3>
+                <div class="simple-rows">
+                  ${fullReportData.aiAnalysis.categoryPerformance.map(cat => `
+                    <div class="simple-row">
+                      <span class="name">${cat.label}</span>
+                      <div class="bar"><div class="fill" style="width:${Math.max(0, Math.min(100, ((cat.average || 0) / 5) * 100))}%"></div></div>
+                      <span class="score">${cat.average || 0}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            ${fullReportData.aiAnalysis.keyImprovementAreas && fullReportData.aiAnalysis.keyImprovementAreas.length > 0 ? `
+              <div class="analysis-block">
+                <h3>Key Improvement Areas</h3>
+                <ul class="improvement-list">
+                  ${fullReportData.aiAnalysis.keyImprovementAreas.map(item => `<li>${item}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
+
+            ${fullReportData.aiAnalysis.questionPerformance && fullReportData.aiAnalysis.questionPerformance.length > 0 ? `
+              <div class="analysis-block">
+                <h3>All 20 Questions Performance</h3>
+                <table class="questions-table">
+                  <tbody>
+                    ${fullReportData.aiAnalysis.questionPerformance.map((item, idx) => `
+                      <tr>
+                        <td>${idx + 1}. ${item.question}</td>
+                        <td>${item.responseCount > 0 ? `${item.average}/5` : 'N/A'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
         ${fullReportData.daysData.map(day => `
           <div class="day-section">
             <div class="day-header">
@@ -1597,6 +1667,96 @@ const AdminDashboard = () => {
                   )}
 
                   <div className="full-report-content" id="full-report-content">
+                    {fullReportData.aiAnalysis && (
+                      <div className="fr-day-card expanded">
+                        <div className="fr-day-header">
+                          <div className="fr-day-info">
+                            <h3>AI-Powered Feedback Analysis</h3>
+                            <p className="fr-day-desc">Model summary from day ratings and overall evaluation questions</p>
+                          </div>
+                        </div>
+                        <div className="fr-day-body">
+                          <div className="fr-stats-row">
+                            <div className="fr-stat-card total">
+                              <div className="fr-stat-value">{fullReportData.aiAnalysis.totalFeedbacks || 0}</div>
+                              <div className="fr-stat-label">Total Feedbacks</div>
+                            </div>
+                            <div className="fr-stat-card rating">
+                              <div className="fr-stat-value">{fullReportData.aiAnalysis.averageDayRating > 0 ? `${fullReportData.aiAnalysis.averageDayRating}★` : 'N/A'}</div>
+                              <div className="fr-stat-label">Avg Day Rating</div>
+                            </div>
+                            <div className="fr-stat-card rating">
+                              <div className="fr-stat-value">{fullReportData.aiAnalysis.averageQuestionRating > 0 ? `${fullReportData.aiAnalysis.averageQuestionRating}/5` : 'N/A'}</div>
+                              <div className="fr-stat-label">Avg Question Rating</div>
+                            </div>
+                            <div className="fr-stat-card present">
+                              <div className="fr-stat-value">{fullReportData.aiAnalysis.positivePercent || 0}%</div>
+                              <div className="fr-stat-label">Positive</div>
+                            </div>
+                          </div>
+
+                          {fullReportData.aiAnalysis.categoryPerformance && fullReportData.aiAnalysis.categoryPerformance.length > 0 && (
+                            <div className="fr-ratings-section">
+                              <h4>Performance by Category</h4>
+                              <div className="fr-rating-dist">
+                                {fullReportData.aiAnalysis.categoryPerformance.map((cat) => (
+                                  <div key={cat.key} className="fr-rating-row">
+                                    <span className="fr-rating-stars">{cat.label}</span>
+                                    <div className="fr-rating-bar">
+                                      <div
+                                        className="fr-rating-fill"
+                                        style={{ width: `${Math.max(0, Math.min(100, ((cat.average || 0) / 5) * 100))}%` }}
+                                      ></div>
+                                    </div>
+                                    <span className="fr-rating-count">{cat.average || 0}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {fullReportData.aiAnalysis.keyImprovementAreas && fullReportData.aiAnalysis.keyImprovementAreas.length > 0 && (
+                            <div className="fr-ratings-section">
+                              <h4>Key Improvement Areas</h4>
+                              <div className="fr-comments">
+                                {fullReportData.aiAnalysis.keyImprovementAreas.map((item, idx) => (
+                                  <div key={idx} className="fr-comment">
+                                    <p className="fr-comment-text">{item}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {fullReportData.aiAnalysis.questionPerformance && fullReportData.aiAnalysis.questionPerformance.length > 0 && (
+                            <div className="fr-ratings-section">
+                              <h4>All 20 Questions Performance</h4>
+                              <div className="att-reports-table-wrap">
+                                <table className="att-reports-table">
+                                  <thead>
+                                    <tr>
+                                      <th>#</th>
+                                      <th>Question</th>
+                                      <th>Average</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {fullReportData.aiAnalysis.questionPerformance.map((item, idx) => (
+                                      <tr key={item.key}>
+                                        <td>{idx + 1}</td>
+                                        <td>{item.question}</td>
+                                        <td>{item.responseCount > 0 ? `${item.average}/5` : 'N/A'}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {fullReportData.daysData.map(day => (
                       <div 
                         key={day.dayNumber} 

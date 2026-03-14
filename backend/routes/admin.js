@@ -751,6 +751,30 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
     const attendance = await Attendance.find({ course: courseId }).sort({ dayNumber: 1 });
     const dayImages = await AttendanceDayImage.find({ course: courseId }).sort({ dayNumber: 1 });
     const dayRatings = await DayRating.find({ course: courseId }).populate('student', 'name');
+    const evaluations = await Evaluation.find({ course: courseId });
+
+    const evaluationQuestionConfig = [
+      { key: 'q1', text: 'How clearly were the objectives of the training program explained?', category: 'content', scoreMap: { 'Very Clear': 5, 'Clear': 4, 'Neutral': 3, 'Unclear': 2, 'Very Unclear': 1 } },
+      { key: 'q2', text: 'How well was the program structured?', category: 'content', scoreMap: { 'Excellent': 5, 'Good': 4, 'Average': 3, 'Poor': 2, 'Very Poor': 1 } },
+      { key: 'q3', text: 'Was the duration of the program appropriate?', category: 'content', scoreMap: { 'Appropriate': 5, 'Slightly Long': 3, 'Slightly Short': 3, 'Too Long': 2, 'Too Short': 2 } },
+      { key: 'q4', text: 'How relevant was the course content to your needs?', category: 'content', scoreMap: { 'Very Relevant': 5, 'Relevant': 4, 'Neutral': 3, 'Less Relevant': 2, 'Not Relevant': 1 } },
+      { key: 'q5', text: 'How would you rate the quality of learning materials?', category: 'content', scoreMap: { 'Excellent': 5, 'Good': 4, 'Average': 3, 'Poor': 2, 'Very Poor': 1 } },
+      { key: 'q6', text: 'How understandable was the content delivered?', category: 'content', scoreMap: { 'Very Easy to Understand': 5, 'Easy to Understand': 4, 'Neutral': 3, 'Difficult': 2, 'Very Difficult': 1 } },
+      { key: 'q7', text: 'How knowledgeable was the trainer?', category: 'trainer', scoreMap: { 'Highly Knowledgeable': 5, 'Knowledgeable': 4, 'Neutral': 3, 'Less Knowledgeable': 2, 'Not Knowledgeable': 1 } },
+      { key: 'q8', text: 'How effective was the trainer\'s explanation style?', category: 'trainer', scoreMap: { 'Very Effective': 5, 'Effective': 4, 'Neutral': 3, 'Ineffective': 2, 'Very Ineffective': 1 } },
+      { key: 'q9', text: 'How well did the trainer encourage interaction?', category: 'trainer', scoreMap: { 'Very Well': 5, 'Well': 4, 'Neutral': 3, 'Poorly': 2, 'Very Poorly': 1 } },
+      { key: 'q10', text: 'How engaging were the sessions?', category: 'trainer', scoreMap: { 'Highly Engaging': 5, 'Engaging': 4, 'Neutral': 3, 'Less Engaging': 2, 'Not Engaging': 1 } },
+      { key: 'q11', text: 'Did activities or discussions help your understanding?', category: 'trainer', scoreMap: { 'Very Helpful': 5, 'Helpful': 4, 'Neutral': 3, 'Less Helpful': 2, 'Not Helpful': 1 } },
+      { key: 'q12', text: 'How motivated were you to attend all sessions?', category: 'outcomes', scoreMap: { 'Highly Motivated': 5, 'Motivated': 4, 'Neutral': 3, 'Less Motivated': 2, 'Not Motivated': 1 } },
+      { key: 'q13', text: 'How much knowledge or skill did you gain?', category: 'outcomes', scoreMap: { 'A Lot': 5, 'Good Amount': 4, 'Moderate': 3, 'Little': 2, 'None': 1 } },
+      { key: 'q14', text: 'How confident do you feel after completing the program?', category: 'outcomes', scoreMap: { 'Very Confident': 5, 'Confident': 4, 'Neutral': 3, 'Less Confident': 2, 'Not Confident': 1 } },
+      { key: 'q15', text: 'How useful is this program for your future goals?', category: 'outcomes', scoreMap: { 'Very Useful': 5, 'Useful': 4, 'Neutral': 3, 'Less Useful': 2, 'Not Useful': 1 } },
+      { key: 'q16', text: 'What best describes your attendance?', category: 'logistics', scoreMap: { 'Attended All Sessions': 5, 'Missed 1–2 Sessions': 4, 'Missed Several Sessions': 3, 'Attended Few Sessions': 2, 'Rarely Attended': 1 } },
+      { key: 'q17', text: 'What was the main reason for missing any sessions?', category: 'logistics', scoreMap: { 'No Sessions Missed': 5, 'Timing Issues': 3, 'Academic Workload': 3, 'Personal Reasons': 2, 'Technical Issues': 2 } },
+      { key: 'q18', text: 'How convenient was the session schedule?', category: 'logistics', scoreMap: { 'Very Convenient': 5, 'Convenient': 4, 'Neutral': 3, 'Inconvenient': 2, 'Very Inconvenient': 1 } },
+      { key: 'q19', text: 'Overall, how satisfied are you with the program?', category: 'outcomes', scoreMap: { 'Very Satisfied': 5, 'Satisfied': 4, 'Neutral': 3, 'Dissatisfied': 2, 'Very Dissatisfied': 1 } },
+      { key: 'q20', text: 'Would you recommend this program to others?', category: 'outcomes', scoreMap: { 'Definitely Yes': 5, 'Probably Yes': 4, 'Not Sure': 3, 'Probably No': 2, 'Definitely No': 1 } }
+    ];
 
     const daysData = [];
     for (let day = 1; day <= course.totalDays; day++) {
@@ -827,6 +851,91 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
       });
     }
 
+    const totalDayRatings = dayRatings.length;
+    const overallDayRating = totalDayRatings > 0
+      ? parseFloat((dayRatings.reduce((sum, r) => sum + r.rating, 0) / totalDayRatings).toFixed(1))
+      : 0;
+
+    const questionPerformance = evaluationQuestionConfig.map((question) => {
+      let totalScore = 0;
+      let responseCount = 0;
+
+      evaluations.forEach((evaluation) => {
+        const selectedAnswer = evaluation.answers?.[question.key];
+        if (!selectedAnswer) return;
+        const mappedScore = question.scoreMap[selectedAnswer];
+        if (typeof mappedScore !== 'number') return;
+        totalScore += mappedScore;
+        responseCount += 1;
+      });
+
+      const average = responseCount > 0 ? parseFloat((totalScore / responseCount).toFixed(1)) : 0;
+      return {
+        key: question.key,
+        question: question.text,
+        category: question.category,
+        average,
+        responseCount
+      };
+    });
+
+    const validQuestionAverages = questionPerformance.filter((q) => q.responseCount > 0);
+    const overallQuestionRating = validQuestionAverages.length > 0
+      ? parseFloat((validQuestionAverages.reduce((sum, q) => sum + q.average, 0) / validQuestionAverages.length).toFixed(1))
+      : 0;
+
+    const categoryMap = {
+      trainer: 'Trainer',
+      content: 'Content',
+      logistics: 'Logistics',
+      outcomes: 'Outcomes'
+    };
+
+    const categoryPerformance = Object.keys(categoryMap).map((categoryKey) => {
+      const items = validQuestionAverages.filter((q) => q.category === categoryKey);
+      const average = items.length > 0
+        ? parseFloat((items.reduce((sum, item) => sum + item.average, 0) / items.length).toFixed(1))
+        : 0;
+      return {
+        key: categoryKey,
+        label: categoryMap[categoryKey],
+        average,
+        questionCount: items.length
+      };
+    });
+
+    const lowerRatedQuestions = validQuestionAverages
+      .filter((q) => q.average > 0)
+      .sort((a, b) => a.average - b.average)
+      .slice(0, 5);
+
+    const lowQuestionAlerts = lowerRatedQuestions
+      .filter((q) => q.average <= 3.8)
+      .map((q) => `Immediate improvement required for: ${q.question} (Avg ${q.average}/5).`);
+
+    const lowCategoryAlerts = categoryPerformance
+      .filter((category) => category.questionCount > 0 && category.average > 0 && category.average <= 3.9)
+      .map((category) => `Strengthen ${category.label.toLowerCase()} delivery to improve overall learner experience (Avg ${category.average}/5).`);
+
+    const lowDayAlerts = daysData
+      .filter((day) => day.totalRatings > 0 && day.avgRating <= 3.8)
+      .map((day) => `Review Day ${day.dayNumber} (${day.sectionTitle}) engagement and content flow (Avg ${day.avgRating}/5).`)
+      .slice(0, 2);
+
+    const keyImprovementAreas = [
+      ...lowCategoryAlerts,
+      ...lowQuestionAlerts,
+      ...lowDayAlerts
+    ].slice(0, 6);
+
+    if (keyImprovementAreas.length === 0) {
+      keyImprovementAreas.push('Maintain current training quality and continue collecting detailed learner feedback for continuous improvement.');
+    }
+
+    const positivePercent = totalDayRatings > 0
+      ? Math.round((dayRatings.filter((rating) => rating.rating >= 4).length / totalDayRatings) * 100)
+      : 0;
+
     res.json({
       courseId: course._id,
       title: course.title,
@@ -839,10 +948,21 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
       } : null,
       totalDays: course.totalDays,
       totalStudents: enrollments.length,
+      totalEvaluations: evaluations.length,
       startDate: course.startDate,
       endDate: course.endDate,
       status: course.status,
-      daysData
+      daysData,
+      aiAnalysis: {
+        totalFeedbacks: totalDayRatings,
+        averageDayRating: overallDayRating,
+        averageQuestionRating: overallQuestionRating,
+        positivePercent,
+        questionPerformance,
+        categoryPerformance,
+        lowerRatedQuestions,
+        keyImprovementAreas
+      }
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
