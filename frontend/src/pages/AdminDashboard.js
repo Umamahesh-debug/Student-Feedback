@@ -605,21 +605,6 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            ${fullReportData.aiAnalysis.courseStudentCounts && fullReportData.aiAnalysis.courseStudentCounts.length > 0 ? `
-              <div class="analysis-block">
-                <h3>No. of Students in Each Course</h3>
-                <table class="questions-table">
-                  <tbody>
-                    ${fullReportData.aiAnalysis.courseStudentCounts.map(item => `
-                      <tr>
-                        <td>${item.title} ${item.courseCode ? `(${item.courseCode})` : ''}</td>
-                        <td>${item.students}</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-            ` : ''}
           </div>
         ` : ''}
       </body>
@@ -1986,24 +1971,11 @@ const AdminDashboard = () => {
                               </div>
 
                               <div className="fr-ratings-section">
-                                <h4>No. of Students of Each Course</h4>
-                                <div className="att-reports-table-wrap">
-                                  <table className="att-reports-table">
-                                    <thead>
-                                      <tr>
-                                        <th>Course</th>
-                                        <th>Students</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {(fullReportData.aiAnalysis.courseStudentCounts || []).map((item) => (
-                                        <tr key={item.courseId}>
-                                          <td>{item.title} {item.courseCode ? `(${item.courseCode})` : ''}</td>
-                                          <td>{item.students}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                <h4>Model Note</h4>
+                                <div className="fr-comments">
+                                  <div className="fr-comment">
+                                    <p className="fr-comment-text">{fullReportData.aiAnalysis.modelAccuracy?.note || 'Simulated benchmark for presentation only'}</p>
+                                  </div>
                                 </div>
                               </div>
                             </div>

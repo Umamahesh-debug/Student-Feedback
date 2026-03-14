@@ -754,26 +754,6 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
     const dayRatings = await DayRating.find({ course: courseId }).populate('student', 'name');
     const evaluations = await Evaluation.find({ course: courseId });
 
-    const [allCourses, approvedEnrollmentCounts] = await Promise.all([
-      Course.find().select('_id title courseCode').sort({ createdAt: -1 }),
-      Enrollment.aggregate([
-        { $match: { status: 'approved' } },
-        { $group: { _id: '$course', count: { $sum: 1 } } }
-      ])
-    ]);
-
-    const approvedCountMap = {};
-    approvedEnrollmentCounts.forEach((item) => {
-      approvedCountMap[item._id.toString()] = item.count;
-    });
-
-    const courseStudentCounts = allCourses.map((courseItem) => ({
-      courseId: courseItem._id,
-      title: courseItem.title,
-      courseCode: courseItem.courseCode || '',
-      students: approvedCountMap[courseItem._id.toString()] || 0
-    }));
-
     const evaluationQuestionConfig = [
       { key: 'q1', text: 'How clearly were the objectives of the training program explained?', category: 'content', scoreMap: { 'Very Clear': 5, 'Clear': 4, 'Neutral': 3, 'Unclear': 2, 'Very Unclear': 1 } },
       { key: 'q2', text: 'How well was the program structured?', category: 'content', scoreMap: { 'Excellent': 5, 'Good': 4, 'Average': 3, 'Poor': 2, 'Very Poor': 1 } },
@@ -1012,7 +992,6 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
         positivePercent,
         overallQuestionsRatingOutOf5: overallQuestionRating,
         modelAccuracy,
-        courseStudentCounts,
         sentimentDistribution,
         questionPerformance,
         categoryPerformance,
