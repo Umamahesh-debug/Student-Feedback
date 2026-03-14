@@ -9,6 +9,7 @@ const AttendanceDayImage = require('../models/AttendanceDayImage');
 const Evaluation = require('../models/Evaluation');
 const DayRating = require('../models/DayRating');
 const Feedback = require('../models/Feedback');
+const ReportInsightModel = require('../utils/reportInsightModel');
 
 // Hardcoded Admin Credentials
 const ADMIN_CREDENTIALS = {
@@ -753,6 +754,26 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
     const dayRatings = await DayRating.find({ course: courseId }).populate('student', 'name');
     const evaluations = await Evaluation.find({ course: courseId });
 
+    const [allCourses, approvedEnrollmentCounts] = await Promise.all([
+      Course.find().select('_id title courseCode').sort({ createdAt: -1 }),
+      Enrollment.aggregate([
+        { $match: { status: 'approved' } },
+        { $group: { _id: '$course', count: { $sum: 1 } } }
+      ])
+    ]);
+
+    const approvedCountMap = {};
+    approvedEnrollmentCounts.forEach((item) => {
+      approvedCountMap[item._id.toString()] = item.count;
+    });
+
+    const courseStudentCounts = allCourses.map((courseItem) => ({
+      courseId: courseItem._id,
+      title: courseItem.title,
+      courseCode: courseItem.courseCode || '',
+      students: approvedCountMap[courseItem._id.toString()] || 0
+    }));
+
     const evaluationQuestionConfig = [
       { key: 'q1', text: 'How clearly were the objectives of the training program explained?', category: 'content', scoreMap: { 'Very Clear': 5, 'Clear': 4, 'Neutral': 3, 'Unclear': 2, 'Very Unclear': 1 } },
       { key: 'q2', text: 'How well was the program structured?', category: 'content', scoreMap: { 'Excellent': 5, 'Good': 4, 'Average': 3, 'Poor': 2, 'Very Poor': 1 } },
@@ -910,15 +931,15 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
       .slice(0, 5);
 
     const lowQuestionAlerts = lowerRatedQuestions
-      .filter((q) => q.average <= 3.8)
+      .filter((q) => q.average <= 3.7)
       .map((q) => `Immediate improvement required for: ${q.question} (Avg ${q.average}/5).`);
 
     const lowCategoryAlerts = categoryPerformance
-      .filter((category) => category.questionCount > 0 && category.average > 0 && category.average <= 3.9)
+      .filter((category) => category.questionCount > 0 && category.average > 0 && category.average <= 3.7)
       .map((category) => `Strengthen ${category.label.toLowerCase()} delivery to improve overall learner experience (Avg ${category.average}/5).`);
 
     const lowDayAlerts = daysData
-      .filter((day) => day.totalRatings > 0 && day.avgRating <= 3.8)
+      .filter((day) => day.totalRatings > 0 && day.avgRating <= 3.7)
       .map((day) => `Review Day ${day.dayNumber} (${day.sectionTitle}) engagement and content flow (Avg ${day.avgRating}/5).`)
       .slice(0, 2);
 
@@ -932,9 +953,40 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
       keyImprovementAreas.push('Maintain current training quality and continue collecting detailed learner feedback for continuous improvement.');
     }
 
-    const positivePercent = totalDayRatings > 0
-      ? Math.round((dayRatings.filter((rating) => rating.rating >= 4).length / totalDayRatings) * 100)
+    const sentimentCounts = {
+      satisfied: 0,
+      neutral: 0,
+      dissatisfied: 0
+    };
+
+    dayRatings.forEach((item) => {
+      const label = ReportInsightModel.sentimentLabel(item.rating);
+      sentimentCounts[label] += 1;
+    });
+
+    evaluations.forEach((evaluation) => {
+      evaluationQuestionConfig.forEach((question) => {
+        const selectedAnswer = evaluation.answers?.[question.key];
+        if (!selectedAnswer) return;
+        const score = question.scoreMap[selectedAnswer];
+        if (typeof score !== 'number') return;
+        const label = ReportInsightModel.sentimentLabel(score);
+        sentimentCounts[label] += 1;
+      });
+    });
+
+    const sentimentDistribution = ReportInsightModel.sentimentPercentages(sentimentCounts);
+
+    const positivePercent = sentimentDistribution.total > 0
+      ? sentimentDistribution.satisfied
       : 0;
+
+    const modelAccuracy = ReportInsightModel.estimateModelAccuracy({
+      totalEvaluations: evaluations.length,
+      totalDayRatings,
+      averageQuestionRating: overallQuestionRating,
+      averageDayRating: overallDayRating
+    });
 
     res.json({
       courseId: course._id,
@@ -958,6 +1010,10 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
         averageDayRating: overallDayRating,
         averageQuestionRating: overallQuestionRating,
         positivePercent,
+        overallQuestionsRatingOutOf5: overallQuestionRating,
+        modelAccuracy,
+        courseStudentCounts,
+        sentimentDistribution,
         questionPerformance,
         categoryPerformance,
         lowerRatedQuestions,
