@@ -41,12 +41,17 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     const response = await api.post('/auth/register', userData);
-    
-    // Check if teacher registration is pending approval
+
+    // Check if email verification is pending (all new registrations)
+    if (response.data.pendingVerification) {
+      return response.data; // Return without setting user/token
+    }
+
+    // Check if teacher registration is pending admin approval
     if (response.data.pendingApproval) {
       return response.data; // Return without setting user/token
     }
-    
+
     const { token, user } = response.data;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));

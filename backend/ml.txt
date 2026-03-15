@@ -1,0 +1,77 @@
+step:1
+
+DayRating collection       → rating (1-5) + comment text
+Feedback collection        → free text per day/course
+CourseSurvey collection    → detailed survey with:
+                               - overallSatisfaction (1-5)
+                               - contentQuality (1-5)
+                               - teachingEffectiveness (1-5)
+                               - courseMaterialQuality (1-5)
+
+
+
+step:2
+MongoDB
+  dayratings     → comment text + rating  ──► label as:
+  coursesurveys  → text fields            ──►   rating 4-5  = Positive
+  feedbacks      → feedback text          ──►   rating 3    = Neutral
+                                          ──►   rating 1-2  = Negative
+
+coursesurveys  → numeric fields ──► label as:
+                                       overallSatisfaction 4-5 = Good
+                                       overallSatisfaction 3   = Average
+                                       overallSatisfaction 1-2 = Poor
+                               - practicalApplication (1-5)
+                               - whatYouLearned (text)
+                               - improvements (text)
+                               - additionalComments (text)
+
+
+step:3
+
+
+INPUT  : "The course was excellent! Loved the practical sessions."
+          ↓
+TF-IDF Vectorizer
+  - Converts text → word/bigram frequency numbers
+  - Example: {"course":0.3, "excellent":0.8, "practical sessions":0.6 ...}
+          ↓
+MultinomialNB Classifier
+  - Learns: which words appear most in Positive/Neutral/Negative feedback
+  - "excellent", "loved", "amazing"    → high weight for Positive
+  - "okay", "decent", "average"        → high weight for Neutral
+  - "disappointed", "poor", "terrible" → high weight for Negative
+          ↓
+OUTPUT : Positive (88.9% confidence)
+
+
+step:4
+
+INPUT  : Student submits CourseSurvey with:
+           contentQuality       = 4
+           teachingEffectiveness = 4
+           courseMaterialQuality = 5
+           practicalApplication  = 4
+           attendancePercentage  = 85%
+          ↓
+StandardScaler
+  - Normalizes all values to same scale
+          ↓
+SVM with RBF Kernel
+  - Finds a decision boundary that separates
+    Good / Average / Poor in 5-dimensional space
+  - Learned patterns from all past survey data
+          ↓
+OUTPUT : Good (71.0% confidence)
+
+
+step-5:
+
+1. Reads ALL feedback each student has submitted so far
+2. Trains both models on that data (+ sample data if < 24 records)
+3. Tests accuracy with 75/25 train-test split
+4. Runs 5-fold cross validation to verify consistency
+5. Prints the full report to terminal
+6. Saves ml_report_charts.png with 6 visual charts
+
+

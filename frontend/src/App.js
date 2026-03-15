@@ -5,6 +5,7 @@ import PrivateRoute from './components/PrivateRoute';
 import Loader from './components/Loader';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import Profile from './pages/Profile';
@@ -38,6 +39,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/doc" element={<Documentation />} />
           <Route path="/evaluations" element={<PublicEvaluations />} />
