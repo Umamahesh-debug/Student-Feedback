@@ -12,7 +12,7 @@ const EditCourse = () => {
     totalDays: 1,
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
-    sections: []
+    days: []
   });
   const [expandedDays, setExpandedDays] = useState({});
   const [loading, setLoading] = useState(false);
@@ -29,23 +29,22 @@ const EditCourse = () => {
         const endDate = course.endDate ? new Date(course.endDate).toISOString().split('T')[0] : '';
 
         // ensure day.date are plain dates for display
-        const sections = (course.sections || []).map(day => ({
+        const days = (course.days || []).map(day => ({
           dayNumber: day.dayNumber,
           date: day.date ? new Date(day.date) : null,
-          sections: (day.sections || []).map(s => ({
-            heading: s.heading || '',
-            description: s.description || '',
-            subSections: (s.subSections || []).map(ss => ({ title: ss.title || '', description: ss.description || '' }))
+          topics: (day.topics || []).map(t => ({
+            name: t.name || '',
+            subtopics: (t.subtopics || []).map(st => ({ title: st.title || '', duration: st.duration || '1 hour' }))
           }))
         }));
 
         setFormData({
           title: course.title || '',
           description: course.description || '',
-          totalDays: course.totalDays || sections.length || 1,
+          totalDays: course.totalDays || days.length || 1,
           startDate,
           endDate,
-          sections
+          days
         });
       } catch (err) {
         console.error('Failed to load course for editing', err);
@@ -64,62 +63,56 @@ const EditCourse = () => {
     if (name === 'totalDays') {
       const days = parseInt(value);
       const start = new Date(formData.startDate || new Date());
-      const secs = [];
+      const daysList = [];
       for (let i = 1; i <= days; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + (i - 1));
-        secs.push({ dayNumber: i, date: d, sections: [] });
+        daysList.push({ dayNumber: i, date: d, topics: [] });
       }
-      setFormData(prev => ({ ...prev, sections: secs }));
+      setFormData(prev => ({ ...prev, days: daysList }));
     }
 
     if (name === 'startDate') {
       const start = new Date(value);
-      const secs = formData.sections.map((day, index) => {
+      const daysList = formData.days.map((day, index) => {
         const d = new Date(start);
         d.setDate(start.getDate() + index);
         return { ...day, date: d };
       });
-      setFormData(prev => ({ ...prev, startDate: value, sections: secs }));
+      setFormData(prev => ({ ...prev, startDate: value, days: daysList }));
     }
   };
 
   const toggleDay = (dayIndex) => setExpandedDays(prev => ({ ...prev, [dayIndex]: !prev[dayIndex] }));
 
-  const addSection = (dayIndex) => {
-    const secs = [...formData.sections];
-    secs[dayIndex].sections.push({ heading: '', description: '', subSections: [] });
-    setFormData(prev => ({ ...prev, sections: secs }));
+  const addTopic = (dayIndex) => {
+    const days = [...formData.days];
+    days[dayIndex].topics.push({ name: '', subtopics: [] });
+    setFormData(prev => ({ ...prev, days }));
   };
 
-  const removeSection = (dayIndex, sectionIndex) => {
-    const secs = [...formData.sections];
-    secs[dayIndex].sections.splice(sectionIndex, 1);
-    setFormData(prev => ({ ...prev, sections: secs }));
+  const removeTopic = (dayIndex, topicIndex) => {
+    const days = [...formData.days];
+    days[dayIndex].topics.splice(topicIndex, 1);
+    setFormData(prev => ({ ...prev, days }));
   };
 
-  const updateSection = (dayIndex, sectionIndex, field, value) => {
-    const secs = [...formData.sections];
-    secs[dayIndex].sections[sectionIndex][field] = value;
-    setFormData(prev => ({ ...prev, sections: secs }));
+  const updateTopic = (dayIndex, topicIndex, field, value) => {
+    const days = [...formData.days];
+    days[dayIndex].topics[topicIndex][field] = value;
+    setFormData(prev => ({ ...prev, days }));
   };
 
-  const addSubSection = (dayIndex, sectionIndex) => {
-    const secs = [...formData.sections];
-    secs[dayIndex].sections[sectionIndex].subSections.push({ title: '', description: '' });
-    setFormData(prev => ({ ...prev, sections: secs }));
+  const removeSubtopic = (dayIndex, topicIndex, subtopicIndex) => {
+    const days = [...formData.days];
+    days[dayIndex].topics[topicIndex].subtopics.splice(subtopicIndex, 1);
+    setFormData(prev => ({ ...prev, days }));
   };
 
-  const removeSubSection = (dayIndex, sectionIndex, subSectionIndex) => {
-    const secs = [...formData.sections];
-    secs[dayIndex].sections[sectionIndex].subSections.splice(subSectionIndex, 1);
-    setFormData(prev => ({ ...prev, sections: secs }));
-  };
-
-  const updateSubSection = (dayIndex, sectionIndex, subSectionIndex, field, value) => {
-    const secs = [...formData.sections];
-    secs[dayIndex].sections[sectionIndex].subSections[subSectionIndex][field] = value;
-    setFormData(prev => ({ ...prev, sections: secs }));
+  const updateSubtopic = (dayIndex, topicIndex, subtopicIndex, field, value) => {
+    const days = [...formData.days];
+    days[dayIndex].topics[topicIndex].subtopics[subtopicIndex][field] = value;
+    setFormData(prev => ({ ...prev, days }));
   };
 
   const handleSubmit = async (e) => {
@@ -133,12 +126,11 @@ const EditCourse = () => {
         totalDays: parseInt(formData.totalDays),
         startDate: formData.startDate,
         endDate: formData.endDate,
-        sections: formData.sections.map((day, index) => ({
+        days: formData.days.map((day, index) => ({
           dayNumber: day.dayNumber || (index + 1),
-          sections: (day.sections || []).map(section => ({
-            heading: section.heading || '',
-            description: section.description || '',
-            subSections: (section.subSections || []).map(sub => ({ title: sub.title || '', description: sub.description || '' }))
+          topics: (day.topics || []).map(topic => ({
+            name: topic.name || '',
+            subtopics: (topic.subtopics || []).map(sub => ({ title: sub.title || '', duration: sub.duration || '1 hour' }))
           }))
         }))
       };
@@ -193,72 +185,79 @@ const EditCourse = () => {
         </div>
 
         <div className="form-section">
-          <h2>Course Structure</h2>
-          <p className="section-info">For each day, add sections (headings) and sub-sections under each section.</p>
+          <h2>Course Topics</h2>
+          <p className="section-info">For each day, add topics with subtopics.</p>
           <div className="days-list">
-            {formData.sections.map((day, dayIndex) => (
+            {formData.days.map((day, dayIndex) => (
               <div key={dayIndex} className="day-item">
                 <div className="day-header" onClick={() => toggleDay(dayIndex)}>
                   <div>
                     <h3>Day {day.dayNumber}</h3>
                     <span className="day-date-display">{day.date ? new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : 'Date not set'}</span>
+                    <span className="topic-count">{day.topics.length} topic{day.topics.length !== 1 ? 's' : ''}</span>
                   </div>
                   {expandedDays[dayIndex] ? <FiChevronUp /> : <FiChevronDown />}
                 </div>
 
                 {expandedDays[dayIndex] && (
                   <div className="day-content">
-                    <div className="sections-list">
-                      {day.sections.map((section, sectionIndex) => (
-                        <div key={sectionIndex} className="section-item">
-                          <div className="section-header-row">
-                            <h4>Section {sectionIndex + 1}</h4>
-                            <button type="button" className="btn-remove" onClick={() => removeSection(dayIndex, sectionIndex)}>
+                    <div className="topics-list">
+                      {day.topics.map((topic, topicIndex) => (
+                        <div key={topicIndex} className="topic-item">
+                          <div className="topic-header-row">
+                            <h4>Topic {topicIndex + 1}</h4>
+                            <button type="button" className="btn-remove" onClick={() => removeTopic(dayIndex, topicIndex)}>
                               <FiTrash2 /> Remove
                             </button>
                           </div>
 
                           <div className="form-group">
-                            <label>Section Heading *</label>
-                            <input type="text" value={section.heading} onChange={(e) => updateSection(dayIndex, sectionIndex, 'heading', e.target.value)} placeholder="e.g., Introduction to Machine Learning" required />
+                            <label>Topic Name *</label>
+                            <input type="text" value={topic.name} onChange={(e) => updateTopic(dayIndex, topicIndex, 'name', e.target.value)} placeholder="e.g., HTML, CSS, JavaScript" required />
                           </div>
 
-                          <div className="form-group">
-                            <label>Section Description</label>
-                            <textarea value={section.description} onChange={(e) => updateSection(dayIndex, sectionIndex, 'description', e.target.value)} rows="2" placeholder="Brief description of this section" />
-                          </div>
-
-                          <div className="sub-sections">
-                            <div className="sub-sections-header">
-                              <label>Sub-Sections</label>
-                              <button type="button" className="btn-add-small" onClick={() => addSubSection(dayIndex, sectionIndex)}>
-                                <FiPlus /> Add Sub-Section
-                              </button>
+                          <div className="subtopics-section">
+                            <label>Subtopics</label>
+                            <div className="subtopics-list">
+                              {topic.subtopics.length > 0 ? (
+                                topic.subtopics.map((subtopic, subIndex) => (
+                                  <div key={subIndex} className="subtopic-item">
+                                    <div className="subtopic-content">
+                                      <input
+                                        type="text"
+                                        value={subtopic.title}
+                                        onChange={(e) => updateSubtopic(dayIndex, topicIndex, subIndex, 'title', e.target.value)}
+                                        placeholder="Subtopic title"
+                                        className="subtopic-title"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={subtopic.duration}
+                                        onChange={(e) => updateSubtopic(dayIndex, topicIndex, subIndex, 'duration', e.target.value)}
+                                        placeholder="e.g., 1 hour"
+                                        className="subtopic-duration"
+                                      />
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="btn-remove-small"
+                                      onClick={() => removeSubtopic(dayIndex, topicIndex, subIndex)}
+                                    >
+                                      <FiTrash2 />
+                                    </button>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="no-subtopics">No subtopics yet.</p>
+                              )}
                             </div>
-
-                            {section.subSections.map((subSection, subSectionIndex) => (
-                              <div key={subSectionIndex} className="sub-section-item">
-                                <div className="sub-section-header">
-                                  <span>Sub-Section {subSectionIndex + 1}</span>
-                                  <button type="button" className="btn-remove-small" onClick={() => removeSubSection(dayIndex, sectionIndex, subSectionIndex)}>
-                                    <FiTrash2 />
-                                  </button>
-                                </div>
-                                <div className="form-group">
-                                  <input type="text" value={subSection.title} onChange={(e) => updateSubSection(dayIndex, sectionIndex, subSectionIndex, 'title', e.target.value)} placeholder="Sub-section title" required />
-                                </div>
-                                <div className="form-group">
-                                  <textarea value={subSection.description} onChange={(e) => updateSubSection(dayIndex, sectionIndex, subSectionIndex, 'description', e.target.value)} rows="2" placeholder="Sub-section description" />
-                                </div>
-                              </div>
-                            ))}
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    <button type="button" className="btn-add-section" onClick={() => addSection(dayIndex)}>
-                      <FiPlus /> Add Section
+                    <button type="button" className="btn-add-topic" onClick={() => addTopic(dayIndex)}>
+                      <FiPlus /> Add Topic
                     </button>
                   </div>
                 )}

@@ -91,41 +91,42 @@ const CourseCertificate = () => {
 
   const downloadCertificate = () => {
     const printContent = certificateRef.current;
-    const WinPrint = window.open('', '', 'width=1200,height=900');
+    const WinPrint = window.open('', '', 'width=1200,height=1000');
     WinPrint.document.write(`
       <html>
         <head>
           <title>Certificate - ${certificate.courseName}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&display=swap');
-            
+
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { 
-              margin: 0; 
-              padding: 40px; 
+            body {
+              margin: 0;
+              padding: 40px;
               font-family: 'Georgia', serif;
               background: #f0f0f0;
               display: flex;
               justify-content: center;
-              align-items: center;
+              align-items: flex-start;
               min-height: 100vh;
             }
-            
+
             .certificate-container {
               position: relative;
               width: 900px;
               background: linear-gradient(180deg, #1a365d 0%, #1a365d 35%, #f5f5f5 35%, #ffffff 100%);
               box-shadow: 0 0 0 4px #c9a227, 0 20px 60px rgba(0,0,0,0.3);
-              overflow: hidden;
+              overflow: visible;
+              min-height: auto;
             }
-            
+
             .cert-top-section {
               position: relative;
               padding: 50px 40px 90px;
               text-align: center;
               background: linear-gradient(135deg, #1a365d 0%, #2d4a7c 50%, #1a365d 100%);
             }
-            
+
             .gold-corner-left {
               position: absolute;
               top: 0;
@@ -135,7 +136,7 @@ const CourseCertificate = () => {
               border-top: 100px solid #c9a227;
               border-left: 100px solid transparent;
             }
-            
+
             .gold-corner-right {
               position: absolute;
               bottom: 0;
@@ -145,7 +146,7 @@ const CourseCertificate = () => {
               border-bottom: 70px solid #c9a227;
               border-right: 70px solid transparent;
             }
-            
+
             .cert-main-title {
               font-family: 'Playfair Display', 'Georgia', serif;
               font-size: 60px;
@@ -155,7 +156,7 @@ const CourseCertificate = () => {
               margin: 0;
               text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
             }
-            
+
             .cert-subtitle {
               font-family: 'Georgia', serif;
               font-size: 22px;
@@ -163,7 +164,7 @@ const CourseCertificate = () => {
               color: #c9a227;
               margin: 12px 0 0;
             }
-            
+
             .cert-seal {
               position: absolute;
               bottom: -55px;
@@ -171,7 +172,7 @@ const CourseCertificate = () => {
               transform: translateX(-50%);
               z-index: 10;
             }
-            
+
             .seal-inner {
               width: 110px;
               height: 110px;
@@ -184,28 +185,28 @@ const CourseCertificate = () => {
               box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3), inset 0 2px 10px rgba(255, 255, 255, 0.3);
               border: 5px solid #1a365d;
             }
-            
+
             .seal-year {
               font-family: 'Georgia', serif;
               font-size: 24px;
               font-weight: bold;
               color: #1a365d;
             }
-            
+
             .seal-text {
               font-size: 12px;
               font-weight: bold;
               letter-spacing: 3px;
               color: #1a365d;
             }
-            
+
             .cert-main-section {
               position: relative;
               padding: 80px 60px 50px;
               text-align: center;
               background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
             }
-            
+
             .blue-triangle-left {
               position: absolute;
               bottom: 0;
@@ -215,7 +216,7 @@ const CourseCertificate = () => {
               border-bottom: 180px solid #1a365d;
               border-right: 180px solid transparent;
             }
-            
+
             .blue-triangle-right {
               position: absolute;
               bottom: 0;
@@ -225,7 +226,7 @@ const CourseCertificate = () => {
               border-bottom: 180px solid #1a365d;
               border-left: 180px solid transparent;
             }
-            
+
             .presented-text {
               font-family: 'Georgia', serif;
               font-size: 16px;
@@ -234,7 +235,7 @@ const CourseCertificate = () => {
               margin: 0 0 20px;
               text-transform: uppercase;
             }
-            
+
             .recipient-name {
               font-family: 'Great Vibes', 'Brush Script MT', cursive;
               font-size: 62px;
@@ -242,14 +243,14 @@ const CourseCertificate = () => {
               margin: 0;
               font-weight: normal;
             }
-            
+
             .gold-line {
               width: 350px;
               height: 3px;
               background: linear-gradient(90deg, transparent, #c9a227, transparent);
               margin: 20px auto 30px;
             }
-            
+
             .course-label {
               font-size: 13px;
               letter-spacing: 4px;
@@ -257,7 +258,7 @@ const CourseCertificate = () => {
               margin: 0 0 12px;
               text-transform: uppercase;
             }
-            
+
             .course-title-cert {
               font-family: 'Playfair Display', 'Georgia', serif;
               font-size: 36px;
@@ -267,7 +268,7 @@ const CourseCertificate = () => {
               text-transform: uppercase;
               letter-spacing: 3px;
             }
-            
+
             .description-text {
               font-size: 15px;
               color: #4a5568;
@@ -275,7 +276,7 @@ const CourseCertificate = () => {
               max-width: 650px;
               margin: 0 auto 35px;
             }
-            
+
             .cert-footer-section {
               display: flex;
               justify-content: space-between;
@@ -284,22 +285,26 @@ const CourseCertificate = () => {
               position: relative;
               z-index: 5;
             }
-            
+
             .footer-left, .footer-right {
               width: 220px;
             }
-            
+
+            .footer-right {
+              display: none;
+            }
+
             .footer-center {
               text-align: center;
             }
-            
+
             .signature-line-gold {
               width: 170px;
               height: 2px;
               background: #c9a227;
               margin: 0 auto 12px;
             }
-            
+
             .footer-label {
               font-size: 12px;
               letter-spacing: 3px;
@@ -307,20 +312,20 @@ const CourseCertificate = () => {
               margin: 0;
               text-transform: uppercase;
             }
-            
+
             .footer-value {
               font-size: 15px;
               color: #1a365d;
               font-weight: 600;
               margin: 6px 0 0;
             }
-            
+
             .footer-sublabel {
               font-size: 12px;
               color: #718096;
               margin: 3px 0 0;
             }
-            
+
             .certificate-badge {
               width: 55px;
               height: 55px;
@@ -332,31 +337,31 @@ const CourseCertificate = () => {
               margin: 0 auto 12px;
               box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             }
-            
+
             .badge-icon {
               font-size: 28px;
             }
-            
+
             .cert-number-footer {
               font-size: 12px;
               color: #4a5568;
               margin: 6px 0;
               font-family: 'Courier New', monospace;
             }
-            
+
             .verification-footer {
               font-size: 11px;
               color: #718096;
               margin: 0;
               font-family: 'Courier New', monospace;
             }
-            
+
             @media print {
-              body { 
-                padding: 0; 
+              body {
+                padding: 0;
                 background: white;
-                print-color-adjust: exact; 
-                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
               }
               .certificate-container {
                 box-shadow: 0 0 0 4px #c9a227;
@@ -373,7 +378,6 @@ const CourseCertificate = () => {
     WinPrint.focus();
     setTimeout(() => {
       WinPrint.print();
-      WinPrint.close();
     }, 500);
   };
 

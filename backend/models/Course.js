@@ -1,22 +1,28 @@
 const mongoose = require('mongoose');
 
-const subSectionSchema = new mongoose.Schema({
+const subtopicSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: false,
-    default: ''
-  },
-  description: {
-    type: String,
-    default: ''
+    required: true
   },
   duration: {
     type: String,
-    default: '' // e.g., "30 minutes"
+    default: '1 hour' // e.g., "1 hour", "30 minutes", "2.5 hours"
   }
 });
 
-const sectionSchema = new mongoose.Schema({
+const topicSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  subtopics: {
+    type: [subtopicSchema],
+    default: []
+  }
+});
+
+const daySchema = new mongoose.Schema({
   dayNumber: {
     type: Number,
     required: true
@@ -24,6 +30,10 @@ const sectionSchema = new mongoose.Schema({
   date: {
     type: Date,
     default: Date.now
+  },
+  topics: {
+    type: [topicSchema],
+    default: []
   },
   completed: {
     type: Boolean,
@@ -35,22 +45,7 @@ const sectionSchema = new mongoose.Schema({
   completedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  },
-  sections: [{
-    heading: {
-      type: String,
-      required: false,
-      default: ''
-    },
-    description: {
-      type: String,
-      default: ''
-    },
-    subSections: {
-      type: [subSectionSchema],
-      default: []
-    }
-  }]
+  }
 });
 
 const courseSchema = new mongoose.Schema({
@@ -79,7 +74,7 @@ const courseSchema = new mongoose.Schema({
     min: 1,
     max: 30
   },
-  sections: [sectionSchema],
+  days: [daySchema],
   status: {
     type: String,
     enum: ['draft', 'active', 'completed'],
@@ -108,22 +103,22 @@ const courseSchema = new mongoose.Schema({
 // Auto-generate course code
 courseSchema.pre('save', async function(next) {
   if (!this.courseCode) {
-    // Find the highest existing course code
     const lastCourse = await mongoose.model('Course')
       .findOne({ courseCode: { $regex: /^CRS\d+$/ } })
       .sort({ courseCode: -1 })
       .select('courseCode');
-    
+
     let nextNumber = 1;
     if (lastCourse && lastCourse.courseCode) {
       const currentNumber = parseInt(lastCourse.courseCode.replace('CRS', ''), 10);
       nextNumber = currentNumber + 1;
     }
-    
+
     this.courseCode = `CRS${String(nextNumber).padStart(4, '0')}`;
   }
   next();
 });
 
 module.exports = mongoose.model('Course', courseSchema);
+
 

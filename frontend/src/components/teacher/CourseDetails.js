@@ -106,66 +106,132 @@ const CourseDetails = () => {
       <div className="course-sections">
         <h2>Course Structure</h2>
         <div className="days-structure">
-          {course.sections?.map((day, dayIndex) => (
-            <div key={dayIndex} className="day-structure-card">
-              <div className="day-structure-header">
-                <h3>Day {day.dayNumber}</h3>
-                <div className="day-header-right">
-                  {day.date && (
-                    <span className="day-date">
-                      {new Date(day.date).toLocaleDateString()}
-                    </span>
-                  )}
-                  <button
-                    className="btn-day-complete"
-                    style={{ backgroundColor: day.completed ? '#ef4444' : '#10b981', color: '#fff' }}
-                    onClick={async () => {
-                      try {
-                        if (!day.completed) {
-                          await api.post(`/attendance/course/${id}/day/${day.dayNumber}/complete`);
-                        } else {
-                          await api.post(`/attendance/course/${id}/day/${day.dayNumber}/uncomplete`);
+          {/* Show new topic-based structure if days exist */}
+          {course.days && course.days.length > 0 ? (
+            course.days.map((day, dayIndex) => (
+              <div key={dayIndex} className="day-structure-card">
+                <div className="day-structure-header">
+                  <h3>Day {day.dayNumber}</h3>
+                  <div className="day-header-right">
+                    {day.date && (
+                      <span className="day-date">
+                        {new Date(day.date).toLocaleDateString()}
+                      </span>
+                    )}
+                    <button
+                      className="btn-day-complete"
+                      style={{ backgroundColor: day.completed ? '#ef4444' : '#10b981', color: '#fff' }}
+                      onClick={async () => {
+                        try {
+                          if (!day.completed) {
+                            await api.post(`/attendance/course/${id}/day/${day.dayNumber}/complete`);
+                          } else {
+                            await api.post(`/attendance/course/${id}/day/${day.dayNumber}/uncomplete`);
+                          }
+                          fetchCourseData();
+                        } catch (error) {
+                          alert('Failed to update progress for this day');
                         }
-                        fetchCourseData();
-                      } catch (error) {
-                        alert('Failed to update progress for this day');
-                      }
-                    }}
-                  >
-                    {day.completed ? 'Unmark Complete' : 'Mark as Complete'}
-                  </button>
+                      }}
+                    >
+                      {day.completed ? 'Unmark Complete' : 'Mark as Complete'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-              {day.sections && day.sections.length > 0 ? (
-                <div className="sections-structure">
-                  {day.sections.map((section, sectionIndex) => (
-                    <div key={sectionIndex} className="section-structure-item">
-                      <div className="section-heading">
-                        <h4>{section.heading}</h4>
-                        {section.description && (
-                          <p className="section-desc">{section.description}</p>
+                {day.topics && day.topics.length > 0 ? (
+                  <div className="topics-structure">
+                    {day.topics.map((topic, topicIndex) => (
+                      <div key={topicIndex} className="topic-structure-item">
+                        <div className="topic-heading">
+                          <h4>{topic.name}</h4>
+                        </div>
+                        {topic.subtopics && topic.subtopics.length > 0 && (
+                          <div className="subtopics-list">
+                            {topic.subtopics.map((subtopic, subIndex) => (
+                              <div key={subIndex} className="subtopic-structure">
+                                <div className="subtopic-title-with-duration">
+                                  <strong>{subtopic.title}</strong>
+                                  {subtopic.duration && (
+                                    <span className="subtopic-duration-badge">{subtopic.duration}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                      {section.subSections && section.subSections.length > 0 && (
-                        <div className="sub-sections-list">
-                          {section.subSections.map((subSection, subIndex) => (
-                            <div key={subIndex} className="sub-section-structure">
-                              <strong>{subSection.title}</strong>
-                              {subSection.description && (
-                                <p>{subSection.description}</p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-topics">No topics added for this day</p>
+                )}
+              </div>
+            ))
+          ) : course.sections && course.sections.length > 0 ? (
+            /* Show old section-based structure for backward compatibility */
+            course.sections.map((day, dayIndex) => (
+              <div key={dayIndex} className="day-structure-card">
+                <div className="day-structure-header">
+                  <h3>Day {day.dayNumber}</h3>
+                  <div className="day-header-right">
+                    {day.date && (
+                      <span className="day-date">
+                        {new Date(day.date).toLocaleDateString()}
+                      </span>
+                    )}
+                    <button
+                      className="btn-day-complete"
+                      style={{ backgroundColor: day.completed ? '#ef4444' : '#10b981', color: '#fff' }}
+                      onClick={async () => {
+                        try {
+                          if (!day.completed) {
+                            await api.post(`/attendance/course/${id}/day/${day.dayNumber}/complete`);
+                          } else {
+                            await api.post(`/attendance/course/${id}/day/${day.dayNumber}/uncomplete`);
+                          }
+                          fetchCourseData();
+                        } catch (error) {
+                          alert('Failed to update progress for this day');
+                        }
+                      }}
+                    >
+                      {day.completed ? 'Unmark Complete' : 'Mark as Complete'}
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <p className="no-sections">No sections added for this day</p>
-              )}
-            </div>
-          ))}
+                {day.sections && day.sections.length > 0 ? (
+                  <div className="sections-structure">
+                    {day.sections.map((section, sectionIndex) => (
+                      <div key={sectionIndex} className="section-structure-item">
+                        <div className="section-heading">
+                          <h4>{section.heading}</h4>
+                          {section.description && (
+                            <p className="section-desc">{section.description}</p>
+                          )}
+                        </div>
+                        {section.subSections && section.subSections.length > 0 && (
+                          <div className="sub-sections-list">
+                            {section.subSections.map((subSection, subIndex) => (
+                              <div key={subIndex} className="sub-section-structure">
+                                <strong>{subSection.title}</strong>
+                                {subSection.description && (
+                                  <p>{subSection.description}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-sections">No sections added for this day</p>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="no-sections">No course content available</p>
+          )}
         </div>
       </div>
 

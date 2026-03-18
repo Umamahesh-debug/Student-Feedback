@@ -228,7 +228,7 @@ const MyCourses = () => {
                     </div>
                     <div className="stat-item">
                       <FiBook className="stat-icon" />
-                      <span>{course.sections?.length || 0}<br/>Sections</span>
+                      <span>{course.days?.reduce((sum, day) => sum + (day.topics?.length || 0), 0) || 0}<br/>Topics</span>
                     </div>
                   </div>
 

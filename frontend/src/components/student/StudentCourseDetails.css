@@ -548,6 +548,48 @@
   margin-left: 22px;
 }
 
+/* Topics Container (replaces sections) */
+.topics-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding-top: 20px;
+}
+
+.topic-card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  border-left: 4px solid #3b82f6;
+}
+
+.topic-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.topic-header svg {
+  color: #3b82f6;
+  font-size: 18px;
+}
+
+.topic-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #000;
+  margin: 0;
+}
+
+.day-info .topic-count {
+  display: block;
+  font-size: 12px;
+  color: #999;
+  font-weight: 400;
+  margin-top: 2px;
+}
+
 /* Empty States */
 .empty-sections {
   text-align: center;

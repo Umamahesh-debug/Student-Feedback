@@ -25,8 +25,8 @@ const StudentCourseDetails = () => {
 
   // Fetch all day ratings when course loads
   useEffect(() => {
-    if (course && course.sections) {
-      course.sections.forEach(day => {
+    if (course && course.days) {
+      course.days.forEach(day => {
         if (day.completed) {
           fetchDayRating(day.dayNumber);
         }
@@ -72,7 +72,7 @@ const StudentCourseDetails = () => {
       ]);
 
       setCourse(courseRes.data);
-      
+
       // Find enrollment for this course
       const courseEnrollment = enrollmentsRes.data.find(
         e => e.course && e.course._id === id
@@ -87,8 +87,8 @@ const StudentCourseDetails = () => {
       setAttendance(courseAttendance?.records || []);
 
       // Expand first incomplete day by default
-      if (courseRes.data.sections && courseRes.data.sections.length > 0) {
-        const firstIncompleteIndex = courseRes.data.sections.findIndex(
+      if (courseRes.data.days && courseRes.data.days.length > 0) {
+        const firstIncompleteIndex = courseRes.data.days.findIndex(
           (day) => !isDayCompleted(day.dayNumber)
         );
         if (firstIncompleteIndex !== -1) {
@@ -109,7 +109,7 @@ const StudentCourseDetails = () => {
       const next = { ...prev, [dayIndex]: !prev[dayIndex] };
       // If expanded now, attempt to fetch rating for that day
       if (next[dayIndex]) {
-        const day = course.sections && course.sections[dayIndex];
+        const day = course.days && course.days[dayIndex];
         if (day && day.completed) {
           fetchDayRating(day.dayNumber);
         }
@@ -119,10 +119,10 @@ const StudentCourseDetails = () => {
   };
 
   const isDayCompleted = (dayNumber) => {
-    // Use teacher-marked completion on course sections
-    if (!course || !course.sections) return false;
-    const section = course.sections.find(s => s.dayNumber === dayNumber);
-    return section ? !!section.completed : false;
+    // Use teacher-marked completion on course days
+    if (!course || !course.days) return false;
+    const day = course.days.find(d => d.dayNumber === dayNumber);
+    return day ? !!day.completed : false;
   };
 
   const fetchDayRating = async (dayNumber) => {
@@ -363,23 +363,25 @@ const StudentCourseDetails = () => {
       <div className="course-content-card">
         <div className="content-header">
           <h2>Course Content</h2>
-          <p>Click on a day to view sections and sub-sections</p>
+          <p>Click on a day to view topics</p>
         </div>
 
-        {course.sections && course.sections.length > 0 ? (
+        {(course.days || course.sections) && (course.days?.length > 0 || course.sections?.length > 0) ? (
           <div className="days-timeline">
-              {course.sections.map((day, dayIndex) => {
+            {/* New topic-based structure */}
+            {course.days && course.days.length > 0 ? (
+              course.days.map((day, dayIndex) => {
               const isCompleted = isDayCompleted(day.dayNumber);
               const isExpanded = expandedDays[dayIndex];
               const dayDate = getDayDate(day);
               const isToday = dayIndex === daysCompleted && !isCompleted;
 
               return (
-                <div 
-                  key={dayIndex} 
+                <div
+                  key={dayIndex}
                   className={`day-item ${isCompleted ? 'completed' : ''} ${isToday ? 'current' : ''} ${isExpanded ? 'expanded' : ''}`}
                 >
-                  <div 
+                  <div
                     className="day-header"
                     onClick={() => toggleDay(dayIndex)}
                   >
@@ -391,12 +393,17 @@ const StudentCourseDetails = () => {
                           <span>{day.dayNumber}</span>
                         )}
                       </div>
-                      
+
                       <div className="day-info">
                         <h3>Day {day.dayNumber}</h3>
                         {dayDate && (
                           <span className="day-date">
                             <FiCalendar /> {dayDate}
+                          </span>
+                        )}
+                        {day.topics && day.topics.length > 0 && (
+                          <span className="topic-count">
+                            {day.topics.length} topic{day.topics.length !== 1 ? 's' : ''}
                           </span>
                         )}
                       </div>
@@ -417,52 +424,43 @@ const StudentCourseDetails = () => {
 
                   {isExpanded && (
                     <div className="day-content">
-                      {day.sections && day.sections.length > 0 ? (
-                        <div className="sections-container">
-                          {day.sections.map((section, sectionIndex) => (
-                            <div key={sectionIndex} className="section-card">
-                              {section.heading && (
-                                <div className="section-header">
-                                  <FiBook />
-                                  <h4>{section.heading}</h4>
-                                </div>
-                              )}
-                              {section.description && (
-                                <p className="section-description">{section.description}</p>
-                              )}
-                              
-                              {section.subSections && section.subSections.length > 0 && (
-                                <div className="subsections-list">
-                                  {section.subSections.map((subSection, subIndex) => (
-                                    <div key={subIndex} className="subsection-item">
-                                      <div className="subsection-header">
+                      {day.topics && day.topics.length > 0 ? (
+                        <div className="topics-container">
+                          {day.topics.map((topic, topicIndex) => (
+                            <div key={topicIndex} className="topic-card">
+                              <div className="topic-header">
+                                <FiBook />
+                                <h4>{topic.name}</h4>
+                              </div>
+
+                              {topic.subtopics && topic.subtopics.length > 0 && (
+                                <div className="subtopics-list">
+                                  {topic.subtopics.map((subtopic, subIndex) => (
+                                    <div key={subIndex} className="subtopic-item">
+                                      <div className="subtopic-header">
                                         <FiTarget />
-                                        <span className="subsection-title">{subSection.title}</span>
-                                        {subSection.duration && (
-                                          <span className="subsection-duration">
-                                            <FiClock /> {subSection.duration}
+                                        <span className="subtopic-title">{subtopic.title}</span>
+                                        {subtopic.duration && (
+                                          <span className="subtopic-duration">
+                                            <FiClock /> {subtopic.duration}
                                           </span>
                                         )}
                                       </div>
-                                      {subSection.description && (
-                                        <p className="subsection-description">
-                                          {subSection.description}
-                                        </p>
-                                      )}
                                     </div>
                                   ))}
                                 </div>
                               )}
                             </div>
                           ))}
+
                           {/* Rating UI: show if day marked completed by teacher */}
                           <div className="day-rating">
                             {isCompleted ? (
                               dayRatings[day.dayNumber] ? (
                                 <div className="rated-info">
-                                  <div style={{display:'flex',alignItems:'center',gap:12}}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <div className="stars-wrapper">
-                                      {[1,2,3,4,5].map(n => (
+                                      {[1, 2, 3, 4, 5].map(n => (
                                         <span key={n} className={`star-display ${n <= dayRatings[day.dayNumber].rating ? 'selected' : ''} star-${n}`}>
                                           <svg viewBox="0 0 24 24" width="28" height="28" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden>
                                             <path d="M12 .587l3.668 7.431L23.327 9.9l-5.659 5.507L18.998 24 12 20.201 5.002 24l1.33-8.593L.673 9.9l7.659-1.882L12 .587z" />
@@ -471,9 +469,9 @@ const StudentCourseDetails = () => {
                                       ))}
                                     </div>
                                     <div>
-                                      <div style={{fontWeight:700}}>{dayRatings[day.dayNumber].rating} / 5</div>
+                                      <div style={{ fontWeight: 700 }}>{dayRatings[day.dayNumber].rating} / 5</div>
                                       {dayRatings[day.dayNumber].comment ? (
-                                        <div style={{color:'#374151',marginTop:4}}>{dayRatings[day.dayNumber].comment}</div>
+                                        <div style={{ color: '#374151', marginTop: 4 }}>{dayRatings[day.dayNumber].comment}</div>
                                       ) : null}
                                     </div>
                                   </div>
@@ -484,7 +482,7 @@ const StudentCourseDetails = () => {
                                   <div className="star-rating" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <div>
                                       <div className="stars-wrapper">
-                                        {[1,2,3,4,5].map(n => {
+                                        {[1, 2, 3, 4, 5].map(n => {
                                           const selected = (selectedRatings[day.dayNumber] || 0) >= n;
                                           return (
                                             <button
@@ -501,7 +499,7 @@ const StudentCourseDetails = () => {
                                           );
                                         })}
                                       </div>
-                                      <div className="rating-label" style={{marginLeft:12,fontWeight:600,color:'#111'}}>
+                                      <div className="rating-label" style={{ marginLeft: 12, fontWeight: 600, color: '#111' }}>
                                         {selectedRatings[day.dayNumber] ? ratingLabels[selectedRatings[day.dayNumber]] : ''}
                                       </div>
                                     </div>
@@ -531,14 +529,190 @@ const StudentCourseDetails = () => {
                         </div>
                       ) : (
                         <div className="empty-sections">
-                          <p>No content available for this day</p>
+                          <p>No topics available for this day</p>
                         </div>
                       )}
                     </div>
                   )}
                 </div>
               );
-            })}
+            })
+            ) : course.sections && course.sections.length > 0 ? (
+              /* Old section-based structure for backward compatibility */
+              course.sections.map((day, dayIndex) => {
+                const isCompleted = isDayCompleted(day.dayNumber);
+                const isExpanded = expandedDays[dayIndex];
+                const dayDate = day.date ? new Date(day.date).toLocaleDateString() : '';
+                const isToday = dayIndex === daysCompleted && !isCompleted;
+
+                return (
+                  <div
+                    key={dayIndex}
+                    className={`day-item ${isCompleted ? 'completed' : ''} ${isToday ? 'current' : ''} ${isExpanded ? 'expanded' : ''}`}
+                  >
+                    <div
+                      className="day-header"
+                      onClick={() => toggleDay(dayIndex)}
+                    >
+                      <div className="day-left">
+                        <div className={`day-indicator ${isCompleted ? 'completed' : ''} ${isToday ? 'current' : ''}`}>
+                          {isCompleted ? (
+                            <FiCheckCircle />
+                          ) : (
+                            <span>{day.dayNumber}</span>
+                          )}
+                        </div>
+
+                        <div className="day-info">
+                          <h3>Day {day.dayNumber}</h3>
+                          {dayDate && (
+                            <span className="day-date">
+                              <FiCalendar /> {dayDate}
+                            </span>
+                          )}
+                          {day.sections && day.sections.length > 0 && (
+                            <span className="topic-count">
+                              {day.sections.length} section{day.sections.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="day-right">
+                        {isCompleted && (
+                          <span className="completed-tag">Completed</span>
+                        )}
+                        {isToday && (
+                          <span className="current-tag">Current</span>
+                        )}
+                        <button className="expand-btn">
+                          {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="day-content">
+                        {day.sections && day.sections.length > 0 ? (
+                          <div className="sections-container">
+                            {day.sections.map((section, sectionIndex) => (
+                              <div key={sectionIndex} className="section-card">
+                                <div className="section-header">
+                                  <FiBook />
+                                  <h4>{section.heading}</h4>
+                                </div>
+                                {section.description && (
+                                  <p className="section-description">{section.description}</p>
+                                )}
+
+                                {section.subSections && section.subSections.length > 0 && (
+                                  <div className="subsections-list">
+                                    {section.subSections.map((subSection, subIndex) => (
+                                      <div key={subIndex} className="subsection-item">
+                                        <div className="subsection-header">
+                                          <FiTarget />
+                                          <span className="subsection-title">{subSection.title}</span>
+                                        </div>
+                                        {subSection.description && (
+                                          <p className="subsection-description">{subSection.description}</p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+
+                            {/* Rating UI: show if day marked completed by teacher */}
+                            <div className="day-rating">
+                              {isCompleted ? (
+                                dayRatings[day.dayNumber] ? (
+                                  <div className="rated-info">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                      <div className="stars-wrapper">
+                                        {[1, 2, 3, 4, 5].map(n => (
+                                          <span key={n} className={`star-display ${n <= dayRatings[day.dayNumber].rating ? 'selected' : ''} star-${n}`}>
+                                            <svg viewBox="0 0 24 24" width="28" height="28" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden>
+                                              <path d="M12 .587l3.668 7.431L23.327 9.9l-5.659 5.507L18.998 24 12 20.201 5.002 24l1.33-8.593L.673 9.9l7.659-1.882L12 .587z" />
+                                            </svg>
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <div>
+                                        <div style={{ fontWeight: 700 }}>{dayRatings[day.dayNumber].rating} / 5</div>
+                                        {dayRatings[day.dayNumber].comment ? (
+                                          <div style={{ color: '#374151', marginTop: 4 }}>{dayRatings[day.dayNumber].comment}</div>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="rate-actions">
+                                    <p>Rate this day (1-5):</p>
+                                    <div className="star-rating" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <div>
+                                        <div className="stars-wrapper">
+                                          {[1, 2, 3, 4, 5].map(n => {
+                                            const selected = (selectedRatings[day.dayNumber] || 0) >= n;
+                                            return (
+                                              <button
+                                                key={n}
+                                                type="button"
+                                                className={`star-btn ${selected ? 'selected' : ''} star-${n}`}
+                                                onClick={() => setSelectedRatings(prev => ({ ...prev, [day.dayNumber]: n }))}
+                                                aria-label={`Rate ${n} stars`}
+                                              >
+                                                <svg viewBox="0 0 24 24" width="28" height="28" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden>
+                                                  <path d="M12 .587l3.668 7.431L23.327 9.9l-5.659 5.507L18.998 24 12 20.201 5.002 24l1.33-8.593L.673 9.9l7.659-1.882L12 .587z" />
+                                                </svg>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                        <div className="rating-label" style={{ marginLeft: 12, fontWeight: 600, color: '#111' }}>
+                                          {selectedRatings[day.dayNumber] ? ratingLabels[selectedRatings[day.dayNumber]] : ''}
+                                        </div>
+                                      </div>
+                                      <div className="rating-submit">
+                                        <input
+                                          type="text"
+                                          placeholder="Optional comment"
+                                          value={ratingComments[day.dayNumber] || ''}
+                                          onChange={(e) => setRatingComments(prev => ({ ...prev, [day.dayNumber]: e.target.value }))}
+                                          className="rating-comment"
+                                        />
+                                        <button
+                                          className="btn-primary rating-submit-btn"
+                                          onClick={() => submitDayRating(day.dayNumber, selectedRatings[day.dayNumber], ratingComments[day.dayNumber])}
+                                          disabled={!selectedRatings[day.dayNumber]}
+                                        >
+                                          Submit
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              ) : (
+                                <div className="not-yet">This day has not been marked completed by the teacher yet.</div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="empty-sections">
+                            <p>No sections available for this day</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="empty-content">
+                <FiBook />
+                <p>No course content available</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="empty-content">

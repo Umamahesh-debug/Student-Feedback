@@ -184,7 +184,21 @@
   gap: 15px;
 }
 
+.topics-structure {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
 .section-structure-item {
+  background: white;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+  margin-left: 10px;
+}
+
+.topic-structure-item {
   background: white;
   padding: 15px;
   border-radius: 6px;
@@ -197,6 +211,14 @@
   font-weight: 600;
   color: #000;
   margin-bottom: 8px;
+}
+
+.topic-heading h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 8px;
+  margin: 0;
 }
 
 .section-desc {
@@ -214,11 +236,50 @@
   gap: 10px;
 }
 
+.subtopics-list {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .sub-section-structure {
   background: #f8f9fa;
   padding: 10px 15px;
   border-radius: 4px;
   margin-left: 15px;
+}
+
+.subtopic-structure {
+  background: #f8f9fa;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-left: 15px;
+}
+
+.subtopic-title-with-duration {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.subtopic-title-with-duration strong {
+  font-size: 14px;
+  color: #333;
+  margin: 0;
+}
+
+.subtopic-duration-badge {
+  font-size: 12px;
+  color: #666;
+  background: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+  font-weight: 500;
 }
 
 .sub-section-structure strong {
@@ -235,6 +296,13 @@
 }
 
 .no-sections {
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+.no-topics {
   color: #999;
   font-style: italic;
   text-align: center;

@@ -60,41 +60,39 @@ router.get('/:id', auth, async (req, res) => {
 // Create course (teacher only)
 router.post('/', auth, isTeacher, async (req, res) => {
   try {
-    const { title, description, totalDays, sections, startDate, endDate } = req.body;
+    const { title, description, totalDays, days, startDate, endDate } = req.body;
 
     // Calculate dates for each day based on start date
-    let processedSections = sections || [];
+    let processedDays = days || [];
     const start = startDate ? new Date(startDate) : new Date();
-    
-    // Ensure we have sections for all days
-    if (processedSections.length === 0) {
-      // Create empty sections for each day
-      processedSections = Array.from({ length: totalDays }, (_, index) => ({
+
+    // Ensure we have days for all days with topics
+    if (processedDays.length === 0) {
+      // Create empty days for each day
+      processedDays = Array.from({ length: totalDays }, (_, index) => ({
         dayNumber: index + 1,
         date: new Date(start.getTime() + index * 24 * 60 * 60 * 1000),
-        sections: []
+        topics: []
       }));
     } else {
-      // Process existing sections
-      processedSections = processedSections.map((day, index) => {
+      // Process existing days
+      processedDays = processedDays.map((day, index) => {
         const dayDate = new Date(start);
         dayDate.setDate(start.getDate() + index);
-        
-        // Ensure sections array exists and has proper structure
-        const daySections = (day.sections || []).map(section => ({
-          heading: section.heading || '',
-          description: section.description || '',
-          subSections: (section.subSections || []).map(sub => ({
+
+        // Ensure topics array exists and has proper structure
+        const dayTopics = (day.topics || []).map(topic => ({
+          name: topic.name || '',
+          subtopics: (topic.subtopics || []).map(sub => ({
             title: sub.title || '',
-            description: sub.description || '',
-            duration: sub.duration || ''
+            duration: sub.duration || '1 hour'
           }))
         }));
 
         return {
           dayNumber: day.dayNumber || (index + 1),
           date: dayDate,
-          sections: daySections
+          topics: dayTopics
         };
       });
     }
@@ -103,7 +101,7 @@ router.post('/', auth, isTeacher, async (req, res) => {
       title: title.trim(),
       description: description || '',
       totalDays: parseInt(totalDays),
-      sections: processedSections,
+      days: processedDays,
       startDate: start,
       endDate: endDate ? new Date(endDate) : null,
       teacher: req.user.userId,
@@ -114,10 +112,10 @@ router.post('/', auth, isTeacher, async (req, res) => {
     res.status(201).json(course);
   } catch (error) {
     console.error('Course creation error:', error);
-    res.status(500).json({ 
-      message: 'Server error', 
+    res.status(500).json({
+      message: 'Server error',
       error: error.message,
-      details: error.stack 
+      details: error.stack
     });
   }
 });
@@ -134,18 +132,18 @@ router.put('/:id', auth, isTeacher, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    const { title, description, totalDays, sections, status, enrollmentEnabled, startDate, endDate } = req.body;
+    const { title, description, totalDays, days, status, enrollmentEnabled, startDate, endDate } = req.body;
 
     if (title) course.title = title;
     if (description !== undefined) course.description = description;
     if (totalDays) course.totalDays = totalDays;
     if (endDate) course.endDate = new Date(endDate);
-    if (sections) {
+    if (days) {
       // Recalculate dates if start date changed
-      let processedSections = sections;
+      let processedDays = days;
       const baseStartDate = startDate ? new Date(startDate) : course.startDate || new Date();
       if (baseStartDate) {
-        processedSections = sections.map((day, index) => {
+        processedDays = days.map((day, index) => {
           const dayDate = new Date(baseStartDate);
           dayDate.setDate(baseStartDate.getDate() + index);
           return {
@@ -154,7 +152,7 @@ router.put('/:id', auth, isTeacher, async (req, res) => {
           };
         });
       }
-      course.sections = processedSections;
+      course.days = processedDays;
     }
     if (status) {
       course.status = status;
@@ -169,8 +167,8 @@ router.put('/:id', auth, isTeacher, async (req, res) => {
     if (startDate) {
       course.startDate = new Date(startDate);
       // Recalculate all day dates
-      if (course.sections && course.sections.length > 0) {
-        course.sections = course.sections.map((day, index) => {
+      if (course.days && course.days.length > 0) {
+        course.days = course.days.map((day, index) => {
           const dayDate = new Date(startDate);
           dayDate.setDate(dayDate.getDate() + index);
           return {
@@ -294,8 +292,8 @@ router.put('/:id/mark-completed', auth, isTeacher, async (req, res) => {
     if (!course) return res.status(404).json({ message: 'Course not found' });
     if (course.teacher.toString() !== req.user.userId) return res.status(403).json({ message: 'Not authorized' });
 
-    // Ensure all sections exist and are completed
-    const allCompleted = course.sections && course.sections.length > 0 && course.sections.every(s => s.completed === true);
+    // Ensure all days exist and are completed
+    const allCompleted = course.days && course.days.length > 0 && course.days.every(d => d.completed === true);
     if (!allCompleted) return res.status(400).json({ message: 'Not all days are marked completed' });
 
     course.status = 'completed';
