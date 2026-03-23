@@ -223,12 +223,43 @@ router.post('/course/:courseId/day/:dayNumber/complete', auth, isTeacher, async 
       status: 'approved'
     });
 
-    // Mark the day as completed on the course sections
-    const sectionIndex = dayNum - 1;
-    if (course.sections && course.sections[sectionIndex]) {
-      course.sections[sectionIndex].completed = true;
-      course.sections[sectionIndex].completedAt = new Date();
-      course.sections[sectionIndex].completedBy = req.user.userId;
+    // Mark the day as completed on course.days using dayNumber, not array index.
+    // This handles cases where days are out of order or missing entries.
+    if (!Array.isArray(course.days)) {
+      course.days = [];
+    }
+
+    let dayIndex = course.days.findIndex((d) => Number(d.dayNumber) === dayNum);
+    if (dayIndex === -1) {
+      const computedDate = new Date(course.startDate || new Date());
+      computedDate.setDate(computedDate.getDate() + (dayNum - 1));
+
+      course.days.push({
+        dayNumber: dayNum,
+        date: computedDate,
+        topics: [],
+        completed: false
+      });
+
+      dayIndex = course.days.length - 1;
+    }
+
+    course.days[dayIndex].completed = true;
+    course.days[dayIndex].completedAt = new Date();
+    course.days[dayIndex].completedBy = req.user.userId;
+
+    let touchedDay = true;
+
+    // Backward compatibility for any older documents that still contain sections
+    if (Array.isArray(course.sections) && course.sections[dayIndex]) {
+      course.sections[dayIndex].completed = true;
+      course.sections[dayIndex].completedAt = new Date();
+      course.sections[dayIndex].completedBy = req.user.userId;
+      touchedDay = true;
+    }
+
+    if (touchedDay) {
+      course.days.sort((a, b) => Number(a.dayNumber) - Number(b.dayNumber));
       await course.save();
     }
 
@@ -274,11 +305,27 @@ router.post('/course/:courseId/day/:dayNumber/uncomplete', auth, isTeacher, asyn
       return res.status(400).json({ message: 'Invalid day number' });
     }
 
-    const sectionIndex = dayNum - 1;
-    if (course.sections && course.sections[sectionIndex]) {
-      course.sections[sectionIndex].completed = false;
-      course.sections[sectionIndex].completedAt = null;
-      course.sections[sectionIndex].completedBy = null;
+    let touchedDay = false;
+
+    if (Array.isArray(course.days)) {
+      const dayIndex = course.days.findIndex((d) => Number(d.dayNumber) === dayNum);
+      if (dayIndex !== -1) {
+        course.days[dayIndex].completed = false;
+        course.days[dayIndex].completedAt = null;
+        course.days[dayIndex].completedBy = null;
+        touchedDay = true;
+      }
+    }
+
+    const legacyIndex = dayNum - 1;
+    if (Array.isArray(course.sections) && course.sections[legacyIndex]) {
+      course.sections[legacyIndex].completed = false;
+      course.sections[legacyIndex].completedAt = null;
+      course.sections[legacyIndex].completedBy = null;
+      touchedDay = true;
+    }
+
+    if (touchedDay) {
       await course.save();
     }
 

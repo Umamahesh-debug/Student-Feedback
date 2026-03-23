@@ -115,8 +115,63 @@ const EditCourse = () => {
     setFormData(prev => ({ ...prev, days }));
   };
 
+  const parseDurationToMinutes = (duration) => {
+    if (duration === undefined || duration === null) return 60;
+
+    const raw = String(duration).trim().toLowerCase();
+    if (!raw) return 60;
+
+    const normalized = raw.replace(/\s+/g, ' ');
+    const numericMatch = normalized.match(/(\d+(?:\.\d+)?)/);
+    if (!numericMatch) return null;
+
+    const value = parseFloat(numericMatch[1]);
+    if (Number.isNaN(value) || value < 0) return null;
+
+    if (/(hour|hours|hr|hrs|\bh\b)/.test(normalized)) return Math.round(value * 60);
+    if (/(minute|minutes|min|mins|\bm\b)/.test(normalized)) return Math.round(value);
+
+    return null;
+  };
+
+  const validateDailySubtopicDuration = (days) => {
+    const maxMinutes = 6 * 60;
+
+    for (const day of days) {
+      let totalMinutes = 0;
+      const topics = Array.isArray(day.topics) ? day.topics : [];
+
+      for (let topicIndex = 0; topicIndex < topics.length; topicIndex += 1) {
+        const subtopics = Array.isArray(topics[topicIndex].subtopics) ? topics[topicIndex].subtopics : [];
+
+        for (let subtopicIndex = 0; subtopicIndex < subtopics.length; subtopicIndex += 1) {
+          const parsedMinutes = parseDurationToMinutes(subtopics[subtopicIndex].duration);
+
+          if (parsedMinutes === null) {
+            return `Invalid duration at Day ${day.dayNumber}, Topic ${topicIndex + 1}, Subtopic ${subtopicIndex + 1}. Use formats like \"30 minutes\" or \"1.5 hours\".`;
+          }
+
+          totalMinutes += parsedMinutes;
+        }
+      }
+
+      if (totalMinutes > maxMinutes) {
+        return `Day ${day.dayNumber} exceeds 6 hours total subtopic time. Please reduce durations.`;
+      }
+    }
+
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const durationError = validateDailySubtopicDuration(formData.days);
+    if (durationError) {
+      alert(durationError);
+      return;
+    }
+
     setLoading(true);
 
     try {

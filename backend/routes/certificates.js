@@ -9,6 +9,23 @@ const Attendance = require('../models/Attendance');
 const DayRating = require('../models/DayRating');
 const Evaluation = require('../models/Evaluation');
 
+function getNormalizedCourseDays(course) {
+  if (Array.isArray(course.days) && course.days.length > 0) {
+    return [...course.days].sort((a, b) => Number(a.dayNumber) - Number(b.dayNumber));
+  }
+
+  if (Array.isArray(course.sections) && course.sections.length > 0) {
+    return course.sections.map((section, index) => ({
+      dayNumber: section.dayNumber || index + 1,
+      date: section.date,
+      completed: !!section.completed,
+      sections: section.sections || []
+    }));
+  }
+
+  return [];
+}
+
 // Check certificate eligibility for a course
 router.get('/eligibility/:courseId', auth, async (req, res) => {
   try {
@@ -41,11 +58,12 @@ router.get('/eligibility/:courseId', auth, async (req, res) => {
       return res.status(403).json({ message: 'You are not enrolled in this course' });
     }
 
-    // Get course sections and check if completed (use 'sections' not 'schedule')
-    const courseSections = course.sections || [];
-    const totalScheduledDays = courseSections.length;
-    const completedDays = courseSections.filter(s => s.completed).length;
-    const isCourseCompleted = totalScheduledDays > 0 && completedDays === totalScheduledDays;
+    // Use course.days as primary source (current schema), fallback to legacy sections.
+    const courseDays = getNormalizedCourseDays(course);
+    const totalScheduledDays = course.totalDays || courseDays.length;
+    const completedDaysList = courseDays.filter((d) => d.completed === true);
+    const completedDays = completedDaysList.length;
+    const isCourseCompleted = totalScheduledDays > 0 && completedDays >= totalScheduledDays;
 
     // Get attendance records
     const attendanceRecords = await Attendance.find({
@@ -53,16 +71,23 @@ router.get('/eligibility/:courseId', auth, async (req, res) => {
       student: studentId
     });
 
-    const presentDays = attendanceRecords.filter(a => a.status === 'present').length;
-    const attendancePercentage = completedDays > 0 
-      ? Math.round((presentDays / completedDays) * 100) 
+    const presentDayNumbers = new Set(
+      attendanceRecords
+        .filter((a) => a.status === 'present')
+        .map((a) => Number(a.dayNumber))
+        .filter((n) => !Number.isNaN(n))
+    );
+    const presentDays = presentDayNumbers.size;
+    const attendanceBaseDays = completedDays > 0 ? completedDays : totalScheduledDays;
+    const attendancePercentage = attendanceBaseDays > 0
+      ? Math.round((presentDays / attendanceBaseDays) * 100)
       : 0;
 
     // Check if attendance meets minimum requirement (50%)
     const meetsAttendanceRequirement = attendancePercentage >= 50;
 
     // Check for pending reviews (day ratings only, not evaluation)
-    const pendingReviews = await checkPendingReviews(studentId, courseId, courseSections);
+    const pendingReviews = await checkPendingReviews(studentId, courseId, completedDaysList);
 
     // Check if survey already submitted
     const existingSurvey = await CourseSurvey.findOne({
@@ -115,12 +140,11 @@ router.get('/eligibility/:courseId', auth, async (req, res) => {
 });
 
 // Helper function to check pending reviews (only day-wise ratings)
-async function checkPendingReviews(studentId, courseId, schedule) {
+async function checkPendingReviews(studentId, courseId, completedDays) {
   const pendingReviews = [];
   
   // Check day-wise ratings (using DayRating model)
-  const completedDays = schedule.filter(s => s.completed);
-  
+
   for (const day of completedDays) {
     // Check DayRating instead of Feedback
     const dayRating = await DayRating.findOne({
@@ -130,14 +154,18 @@ async function checkPendingReviews(studentId, courseId, schedule) {
     });
     
     if (!dayRating) {
-      // Get topic from sections if available
-      const topic = day.sections && day.sections[0] ? day.sections[0].heading : `Day ${day.dayNumber}`;
+      // Get topic label from modern topics first, then legacy sections.
+      const topicFromTopics = day.topics && day.topics[0] ? day.topics[0].name : null;
+      const topicFromSections = day.sections && day.sections[0] ? day.sections[0].heading : null;
+      const topic = topicFromTopics || topicFromSections || `Day ${day.dayNumber}`;
+
+      const dayDate = day.date ? new Date(day.date).toLocaleDateString() : `Day ${day.dayNumber}`;
       pendingReviews.push({
         type: 'day_feedback',
         date: day.date,
         dayNumber: day.dayNumber,
         topic: topic,
-        message: `Please submit feedback for ${topic} (${new Date(day.date).toLocaleDateString()})`
+        message: `Please submit feedback for ${topic} (${dayDate})`
       });
     }
   }
@@ -189,15 +217,16 @@ router.post('/survey/:courseId', auth, async (req, res) => {
       return res.status(404).json({ message: 'Course not found' });
     }
 
-    // Get attendance stats (use 'sections' not 'schedule')
-    const courseSections = course.sections || [];
-    const totalDays = courseSections.filter(s => s.completed).length;
+    // Get attendance stats from normalized days
+    const courseDays = getNormalizedCourseDays(course);
+    const completedDays = courseDays.filter((d) => d.completed === true).length;
+    const totalDays = completedDays > 0 ? completedDays : (course.totalDays || courseDays.length);
     const attendanceRecords = await Attendance.find({
       course: courseId,
       student: studentId,
       status: 'present'
     });
-    const attendedDays = attendanceRecords.length;
+    const attendedDays = new Set(attendanceRecords.map((a) => Number(a.dayNumber))).size;
     const attendancePercentage = totalDays > 0 ? Math.round((attendedDays / totalDays) * 100) : 0;
 
     // Create survey
@@ -265,12 +294,13 @@ router.post('/generate/:courseId', auth, async (req, res) => {
       return res.status(403).json({ message: 'You are not enrolled in this course' });
     }
 
-    // Check if course is completed (use 'sections' not 'schedule')
-    const courseSections = course.sections || [];
-    const totalDays = courseSections.length;
-    const completedDays = courseSections.filter(s => s.completed).length;
+    // Check completion from current course.days with legacy fallback.
+    const courseDays = getNormalizedCourseDays(course);
+    const totalDays = course.totalDays || courseDays.length;
+    const completedDaysList = courseDays.filter((d) => d.completed === true);
+    const completedDays = completedDaysList.length;
     
-    if (completedDays < totalDays) {
+    if (totalDays <= 0 || completedDays < totalDays) {
       return res.status(400).json({ message: 'Course is not yet completed' });
     }
 
@@ -280,8 +310,9 @@ router.post('/generate/:courseId', auth, async (req, res) => {
       student: studentId,
       status: 'present'
     });
-    const attendancePercentage = completedDays > 0 
-      ? Math.round((attendanceRecords.length / completedDays) * 100) 
+    const presentDayNumbers = new Set(attendanceRecords.map((a) => Number(a.dayNumber)));
+    const attendancePercentage = completedDays > 0
+      ? Math.round((presentDayNumbers.size / completedDays) * 100)
       : 0;
 
     if (attendancePercentage < 50) {
@@ -291,7 +322,7 @@ router.post('/generate/:courseId', auth, async (req, res) => {
     }
 
     // Check pending reviews
-    const pendingReviews = await checkPendingReviews(studentId, courseId, courseSections);
+    const pendingReviews = await checkPendingReviews(studentId, courseId, completedDaysList);
     if (pendingReviews.length > 0) {
       return res.status(400).json({ 
         message: 'Please complete all pending reviews before downloading certificate',
@@ -337,10 +368,10 @@ router.post('/generate/:courseId', auth, async (req, res) => {
         teacherName: course.teacher.name,
         completionStats: {
           totalDays: completedDays,
-          attendedDays: attendanceRecords.length,
+          attendedDays: presentDayNumbers.size,
           attendancePercentage,
-          courseStartDate: courseSections[0]?.date,
-          courseEndDate: courseSections[courseSections.length - 1]?.date
+          courseStartDate: courseDays[0]?.date,
+          courseEndDate: courseDays[courseDays.length - 1]?.date
         },
         verificationCode: Certificate.generateVerificationCode()
       });

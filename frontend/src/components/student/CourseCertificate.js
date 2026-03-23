@@ -97,274 +97,290 @@ const CourseCertificate = () => {
         <head>
           <title>Certificate - ${certificate.courseName}</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@400;500;600;700&display=swap');
 
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
+            @page {
+              size: A4 portrait;
               margin: 0;
-              padding: 40px;
-              font-family: 'Georgia', serif;
-              background: #f0f0f0;
+            }
+
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
+            html,
+            body {
+              width: 210mm;
+              height: 297mm;
+            }
+
+            body {
+              font-family: 'Poppins', sans-serif;
+              background: #e5e7eb;
               display: flex;
+              align-items: center;
               justify-content: center;
-              align-items: flex-start;
-              min-height: 100vh;
+              color: #0f172a;
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
             }
 
             .certificate-container {
               position: relative;
-              width: 900px;
-              background: linear-gradient(180deg, #1a365d 0%, #1a365d 35%, #f5f5f5 35%, #ffffff 100%);
-              box-shadow: 0 0 0 4px #c9a227, 0 20px 60px rgba(0,0,0,0.3);
-              overflow: visible;
-              min-height: auto;
+              width: 210mm;
+              height: 297mm;
+              overflow: hidden;
+              background: linear-gradient(180deg, #1e3a67 0%, #1e3a67 20%, #f8fafc 20%, #ffffff 100%);
+              border: 3mm solid #c9a227;
+              box-shadow: 0 8mm 20mm rgba(15, 23, 42, 0.25);
             }
 
-            .cert-top-section {
+            .cert-top-header {
               position: relative;
-              padding: 50px 40px 90px;
+              height: 58mm;
+              padding: 12mm 16mm 10mm;
+              display: flex;
+              align-items: flex-start;
+              justify-content: center;
+              background: linear-gradient(135deg, #1f3b6b 0%, #24467b 55%, #1f3b6b 100%);
+            }
+
+            .header-content {
               text-align: center;
-              background: linear-gradient(135deg, #1a365d 0%, #2d4a7c 50%, #1a365d 100%);
+              z-index: 2;
+            }
+
+            .gold-corner-left,
+            .gold-corner-right {
+              position: absolute;
+              width: 0;
+              height: 0;
             }
 
             .gold-corner-left {
-              position: absolute;
               top: 0;
               right: 0;
-              width: 0;
-              height: 0;
-              border-top: 100px solid #c9a227;
-              border-left: 100px solid transparent;
+              border-top: 22mm solid #c9a227;
+              border-left: 22mm solid transparent;
             }
 
             .gold-corner-right {
-              position: absolute;
               bottom: 0;
               left: 0;
-              width: 0;
-              height: 0;
-              border-bottom: 70px solid #c9a227;
-              border-right: 70px solid transparent;
+              border-bottom: 16mm solid #c9a227;
+              border-right: 16mm solid transparent;
             }
 
             .cert-main-title {
-              font-family: 'Playfair Display', 'Georgia', serif;
-              font-size: 60px;
-              font-weight: 400;
-              letter-spacing: 15px;
+              font-family: 'Playfair Display', serif;
+              font-size: 16mm;
+              letter-spacing: 1.8mm;
               color: #ffffff;
-              margin: 0;
-              text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+              line-height: 1;
+              margin-bottom: 2mm;
             }
 
             .cert-subtitle {
-              font-family: 'Georgia', serif;
-              font-size: 22px;
-              letter-spacing: 10px;
-              color: #c9a227;
-              margin: 12px 0 0;
+              color: #d9bb63;
+              font-size: 5mm;
+              letter-spacing: 1.5mm;
+              font-weight: 600;
+            }
+
+            .cert-main-content {
+              position: relative;
+              height: calc(100% - 58mm);
+              padding: 26mm 16mm 14mm;
+              text-align: center;
             }
 
             .cert-seal {
               position: absolute;
-              bottom: -55px;
+              top: -12mm;
               left: 50%;
               transform: translateX(-50%);
-              z-index: 10;
-            }
-
-            .seal-inner {
-              width: 110px;
-              height: 110px;
-              background: linear-gradient(145deg, #d4af37 0%, #c9a227 50%, #b8860b 100%);
-              border-radius: 50%;
               display: flex;
               flex-direction: column;
               align-items: center;
-              justify-content: center;
-              box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3), inset 0 2px 10px rgba(255, 255, 255, 0.3);
-              border: 5px solid #1a365d;
+              z-index: 4;
             }
 
-            .seal-year {
-              font-family: 'Georgia', serif;
-              font-size: 24px;
-              font-weight: bold;
-              color: #1a365d;
-            }
-
-            .seal-text {
-              font-size: 12px;
-              font-weight: bold;
-              letter-spacing: 3px;
-              color: #1a365d;
-            }
-
-            .cert-main-section {
-              position: relative;
-              padding: 80px 60px 50px;
-              text-align: center;
-              background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
-            }
-
-            .blue-triangle-left {
-              position: absolute;
-              bottom: 0;
-              left: 0;
-              width: 0;
-              height: 0;
-              border-bottom: 180px solid #1a365d;
-              border-right: 180px solid transparent;
-            }
-
-            .blue-triangle-right {
-              position: absolute;
-              bottom: 0;
-              right: 0;
-              width: 0;
-              height: 0;
-              border-bottom: 180px solid #1a365d;
-              border-left: 180px solid transparent;
-            }
-
-            .presented-text {
-              font-family: 'Georgia', serif;
-              font-size: 16px;
-              letter-spacing: 5px;
-              color: #718096;
-              margin: 0 0 20px;
-              text-transform: uppercase;
-            }
-
-            .recipient-name {
-              font-family: 'Great Vibes', 'Brush Script MT', cursive;
-              font-size: 62px;
-              color: #1a365d;
-              margin: 0;
-              font-weight: normal;
-            }
-
-            .gold-line {
-              width: 350px;
-              height: 3px;
-              background: linear-gradient(90deg, transparent, #c9a227, transparent);
-              margin: 20px auto 30px;
-            }
-
-            .course-label {
-              font-size: 13px;
-              letter-spacing: 4px;
-              color: #718096;
-              margin: 0 0 12px;
-              text-transform: uppercase;
-            }
-
-            .course-title-cert {
-              font-family: 'Playfair Display', 'Georgia', serif;
-              font-size: 36px;
-              color: #c9a227;
-              margin: 0 0 25px;
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 3px;
-            }
-
-            .description-text {
-              font-size: 15px;
-              color: #4a5568;
-              line-height: 1.9;
-              max-width: 650px;
-              margin: 0 auto 35px;
-            }
-
-            .cert-footer-section {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-end;
-              padding: 35px 30px 70px;
-              position: relative;
-              z-index: 5;
-            }
-
-            .footer-left, .footer-right {
-              width: 220px;
-            }
-
-            .footer-right {
-              display: none;
-            }
-
-            .footer-center {
-              text-align: center;
-            }
-
-            .signature-line-gold {
-              width: 170px;
-              height: 2px;
-              background: #c9a227;
-              margin: 0 auto 12px;
-            }
-
-            .footer-label {
-              font-size: 12px;
-              letter-spacing: 3px;
-              color: #718096;
-              margin: 0;
-              text-transform: uppercase;
-            }
-
-            .footer-value {
-              font-size: 15px;
-              color: #1a365d;
-              font-weight: 600;
-              margin: 6px 0 0;
-            }
-
-            .footer-sublabel {
-              font-size: 12px;
-              color: #718096;
-              margin: 3px 0 0;
-            }
-
-            .certificate-badge {
-              width: 55px;
-              height: 55px;
-              background: linear-gradient(145deg, #d4af37 0%, #c9a227 50%, #b8860b 100%);
+            .seal-inner {
+              width: 24mm;
+              height: 24mm;
               border-radius: 50%;
+              border: 1.2mm solid #173761;
+              background: radial-gradient(circle at 35% 30%, #f1d57b 0%, #c9a227 70%, #aa8310 100%);
               display: flex;
               align-items: center;
               justify-content: center;
-              margin: 0 auto 12px;
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+              box-shadow: 0 2mm 5mm rgba(0, 0, 0, 0.22);
             }
 
-            .badge-icon {
-              font-size: 28px;
+            .seal-icon {
+              font-size: 10mm;
+            }
+
+            .seal-ribbon-left,
+            .seal-ribbon-right {
+              width: 0;
+              height: 0;
+              border-left: 4mm solid transparent;
+              border-right: 4mm solid transparent;
+              border-top: 7mm solid #1f3d6c;
+              margin-top: -1mm;
+            }
+
+            .seal-ribbon-left {
+              position: absolute;
+              left: -8mm;
+              top: 20mm;
+            }
+
+            .seal-ribbon-right {
+              position: absolute;
+              right: -8mm;
+              top: 20mm;
+            }
+
+            .presented-text {
+              font-size: 3.6mm;
+              letter-spacing: 1.1mm;
+              font-weight: 600;
+              color: #64748b;
+              margin-top: 6mm;
+            }
+
+            .recipient-name {
+              margin-top: 4mm;
+              font-family: 'Playfair Display', serif;
+              font-size: 11.5mm;
+              color: #1e3a67;
+              line-height: 1.15;
+            }
+
+            .gold-line {
+              width: 88mm;
+              height: 0.8mm;
+              margin: 5mm auto 7mm;
+              background: linear-gradient(90deg, transparent, #d6b451, transparent);
+            }
+
+            .course-label {
+              font-size: 3.2mm;
+              letter-spacing: 0.85mm;
+              font-weight: 600;
+              color: #64748b;
+            }
+
+            .course-title-cert {
+              margin-top: 3.2mm;
+              font-family: 'Playfair Display', serif;
+              color: #c9a227;
+              font-size: 9mm;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.5mm;
+              line-height: 1.15;
+            }
+
+            .description-text {
+              margin: 7mm auto 0;
+              max-width: 156mm;
+              font-size: 3.6mm;
+              line-height: 1.8;
+              color: #334155;
+            }
+
+            .description-text strong {
+              color: #1e3a67;
+              font-weight: 700;
+            }
+
+            .cert-footer-section {
+              position: absolute;
+              left: 14mm;
+              right: 14mm;
+              bottom: 16mm;
+              display: flex;
+              align-items: flex-end;
+              justify-content: space-between;
+              gap: 8mm;
+            }
+
+            .footer-left,
+            .footer-right {
+              width: 60mm;
+              text-align: center;
+            }
+
+            .footer-center {
+              flex: 1;
+              text-align: center;
+              margin-bottom: 2mm;
+            }
+
+            .signature-line-gold {
+              width: 45mm;
+              height: 0.55mm;
+              background: #c9a227;
+              margin: 0 auto 2.4mm;
+            }
+
+            .footer-label {
+              font-size: 2.8mm;
+              letter-spacing: 0.55mm;
+              color: #64748b;
+              font-weight: 600;
+            }
+
+            .footer-value {
+              margin-top: 1.4mm;
+              font-size: 3.4mm;
+              color: #1e3a67;
+              font-weight: 700;
+            }
+
+            .footer-sublabel {
+              margin-top: 1mm;
+              font-size: 2.7mm;
+              color: #64748b;
+            }
+
+            .cert-number-footer,
+            .verification-footer {
+              font-family: 'Courier New', monospace;
+              color: #475569;
             }
 
             .cert-number-footer {
-              font-size: 12px;
-              color: #4a5568;
-              margin: 6px 0;
-              font-family: 'Courier New', monospace;
+              font-size: 2.9mm;
+              margin-bottom: 1.3mm;
             }
 
             .verification-footer {
-              font-size: 11px;
-              color: #718096;
-              margin: 0;
-              font-family: 'Courier New', monospace;
+              font-size: 2.7mm;
+            }
+
+            .cert-bottom-accent {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 4mm;
+              background: linear-gradient(90deg, #1f3d6c 0%, #c9a227 45%, #1f3d6c 100%);
             }
 
             @media print {
+              html,
               body {
-                padding: 0;
-                background: white;
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
+                background: #ffffff;
               }
+
               .certificate-container {
-                box-shadow: 0 0 0 4px #c9a227;
+                box-shadow: none;
               }
             }
           </style>

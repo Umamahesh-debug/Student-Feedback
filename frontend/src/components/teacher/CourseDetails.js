@@ -130,7 +130,7 @@ const CourseDetails = () => {
                           }
                           fetchCourseData();
                         } catch (error) {
-                          alert('Failed to update progress for this day');
+                          alert(error.response?.data?.message || 'Failed to update progress for this day');
                         }
                       }}
                     >
@@ -191,7 +191,7 @@ const CourseDetails = () => {
                           }
                           fetchCourseData();
                         } catch (error) {
-                          alert('Failed to update progress for this day');
+                          alert(error.response?.data?.message || 'Failed to update progress for this day');
                         }
                       }}
                     >

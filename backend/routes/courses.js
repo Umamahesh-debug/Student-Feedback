@@ -5,6 +5,74 @@ const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const Attendance = require('../models/Attendance');
 
+const MAX_SUBTOPIC_MINUTES_PER_DAY = 6 * 60;
+
+const parseDurationToMinutes = (duration) => {
+  if (duration === undefined || duration === null) {
+    return 60;
+  }
+
+  const raw = String(duration).trim().toLowerCase();
+  if (!raw) {
+    return 60;
+  }
+
+  const normalized = raw.replace(/\s+/g, ' ');
+  const numericMatch = normalized.match(/(\d+(?:\.\d+)?)/);
+  if (!numericMatch) {
+    return null;
+  }
+
+  const value = parseFloat(numericMatch[1]);
+  if (Number.isNaN(value) || value < 0) {
+    return null;
+  }
+
+  if (/(hour|hours|hr|hrs|\bh\b)/.test(normalized)) {
+    return Math.round(value * 60);
+  }
+
+  if (/(minute|minutes|min|mins|\bm\b)/.test(normalized)) {
+    return Math.round(value);
+  }
+
+  return null;
+};
+
+const validateDailySubtopicDuration = (days = []) => {
+  for (const day of days) {
+    let totalMinutes = 0;
+    const topics = Array.isArray(day.topics) ? day.topics : [];
+
+    for (let topicIndex = 0; topicIndex < topics.length; topicIndex += 1) {
+      const subtopics = Array.isArray(topics[topicIndex].subtopics) ? topics[topicIndex].subtopics : [];
+
+      for (let subtopicIndex = 0; subtopicIndex < subtopics.length; subtopicIndex += 1) {
+        const parsedMinutes = parseDurationToMinutes(subtopics[subtopicIndex].duration);
+
+        if (parsedMinutes === null) {
+          return {
+            valid: false,
+            message: `Invalid duration format at Day ${day.dayNumber || 1}, Topic ${topicIndex + 1}, Subtopic ${subtopicIndex + 1}. Use values like "30 minutes" or "1.5 hours".`
+          };
+        }
+
+        totalMinutes += parsedMinutes;
+      }
+    }
+
+    if (totalMinutes > MAX_SUBTOPIC_MINUTES_PER_DAY) {
+      const totalHours = (totalMinutes / 60).toFixed(2);
+      return {
+        valid: false,
+        message: `Day ${day.dayNumber || 1} exceeds 6 hours total subtopic time (${totalHours} hours). Please reduce durations.`
+      };
+    }
+  }
+
+  return { valid: true };
+};
+
 // Get all courses (for students - available courses)
 router.get('/', auth, async (req, res) => {
   try {
@@ -97,6 +165,11 @@ router.post('/', auth, isTeacher, async (req, res) => {
       });
     }
 
+    const durationValidation = validateDailySubtopicDuration(processedDays);
+    if (!durationValidation.valid) {
+      return res.status(400).json({ message: durationValidation.message });
+    }
+
     const course = new Course({
       title: title.trim(),
       description: description || '',
@@ -133,6 +206,7 @@ router.put('/:id', auth, isTeacher, async (req, res) => {
     }
 
     const { title, description, totalDays, days, status, enrollmentEnabled, startDate, endDate } = req.body;
+    const previousStatus = course.status;
 
     if (title) course.title = title;
     if (description !== undefined) course.description = description;
@@ -152,12 +226,18 @@ router.put('/:id', auth, isTeacher, async (req, res) => {
           };
         });
       }
+
+      const durationValidation = validateDailySubtopicDuration(processedDays);
+      if (!durationValidation.valid) {
+        return res.status(400).json({ message: durationValidation.message });
+      }
+
       course.days = processedDays;
     }
     if (status) {
       course.status = status;
       // When publishing (setting to active), course becomes live immediately
-      if (status === 'active' && course.status !== 'active') {
+      if (status === 'active' && previousStatus !== 'active') {
         if (!course.startDate) {
           course.startDate = new Date();
         }
@@ -180,7 +260,7 @@ router.put('/:id', auth, isTeacher, async (req, res) => {
     }
 
     // If marking as completed
-    if (status === 'completed' && course.status !== 'completed') {
+    if (status === 'completed' && previousStatus !== 'completed') {
       course.completedAt = new Date();
     }
 

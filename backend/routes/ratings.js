@@ -13,9 +13,20 @@ router.post('/day', auth, isStudent, async (req, res) => {
     const course = await Course.findById(courseId);
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
-    // Ensure day exists and is marked completed by teacher
-    const section = course.sections && course.sections[dayNumber - 1];
-    if (!section || !section.completed) {
+    // Ensure day exists and is marked completed by teacher.
+    // Primary source is course.days (current schema); keep sections as legacy fallback.
+    const dayNum = parseInt(dayNumber, 10);
+    const completedDay = Array.isArray(course.days)
+      ? course.days.find((d) => Number(d.dayNumber) === dayNum)
+      : null;
+
+    const legacySection = Array.isArray(course.sections)
+      ? course.sections[dayNum - 1]
+      : null;
+
+    const isDayCompleted = Boolean((completedDay && completedDay.completed) || (legacySection && legacySection.completed));
+
+    if (!isDayCompleted) {
       return res.status(400).json({ message: 'Day not marked completed by teacher' });
     }
 

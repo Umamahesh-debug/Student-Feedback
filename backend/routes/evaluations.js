@@ -70,11 +70,20 @@ router.post('/', auth, isStudent, async (req, res) => {
     const course = await Course.findById(courseId);
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
-    // Check if all course sections/days are completed
-    const courseSections = course.sections || [];
-    const totalDays = courseSections.length;
-    const completedDays = courseSections.filter(s => s.completed).length;
-    const isCourseCompleted = totalDays > 0 && completedDays === totalDays;
+    // Check if all course days are completed (current schema: course.days).
+    // Keep legacy fallback for older documents that still use course.sections.
+    const courseDays = Array.isArray(course.days) ? course.days : [];
+    const totalDays = course.totalDays || courseDays.length;
+
+    let completedDays = 0;
+    if (courseDays.length > 0) {
+      completedDays = courseDays.filter((d) => d.completed === true).length;
+    } else {
+      const legacySections = Array.isArray(course.sections) ? course.sections : [];
+      completedDays = legacySections.filter((s) => s.completed === true).length;
+    }
+
+    const isCourseCompleted = totalDays > 0 && completedDays >= totalDays;
 
     // Also check if course status is 'completed' (for backwards compatibility)
     if (!isCourseCompleted && course.status !== 'completed') {

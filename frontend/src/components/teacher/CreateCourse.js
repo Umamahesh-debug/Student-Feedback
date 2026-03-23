@@ -16,6 +16,7 @@ const CreateCourse = () => {
   const [expandedDays, setExpandedDays] = useState({});
   const [loading, setLoading] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [generatingFullCourse, setGeneratingFullCourse] = useState(false);
   const [generatingSubtopics, setGeneratingSubtopics] = useState({});
   const navigate = useNavigate();
 
@@ -138,6 +139,217 @@ Make sure durations are realistic for learning each subtopic.`;
     }
   };
 
+  const parseDurationToMinutes = (duration) => {
+    if (duration === undefined || duration === null) return 60;
+
+    const raw = String(duration).trim().toLowerCase();
+    if (!raw) return 60;
+
+    const normalized = raw.replace(/\s+/g, ' ');
+    const numericMatch = normalized.match(/(\d+(?:\.\d+)?)/);
+    if (!numericMatch) return null;
+
+    const value = parseFloat(numericMatch[1]);
+    if (Number.isNaN(value) || value < 0) return null;
+
+    if (/(hour|hours|hr|hrs|\bh\b)/.test(normalized)) return Math.round(value * 60);
+    if (/(minute|minutes|min|mins|\bm\b)/.test(normalized)) return Math.round(value);
+
+    return null;
+  };
+
+  const formatMinutesAsDuration = (minutes) => {
+    const safeMinutes = Math.max(15, Math.round(minutes));
+    if (safeMinutes % 60 === 0) {
+      const hrs = safeMinutes / 60;
+      return `${hrs} ${hrs === 1 ? 'hour' : 'hours'}`;
+    }
+
+    if (safeMinutes > 60 && safeMinutes % 30 === 0) {
+      return `${(safeMinutes / 60).toFixed(1)} hours`;
+    }
+
+    return `${safeMinutes} minutes`;
+  };
+
+  const normalizeDayToMaxSixHours = (dayTopics = []) => {
+    const maxMinutes = 6 * 60;
+
+    const normalizedTopics = dayTopics.map((topic) => ({
+      name: topic.name || '',
+      subtopics: Array.isArray(topic.subtopics)
+        ? topic.subtopics
+            .map((subtopic) => {
+              const title = typeof subtopic?.title === 'string' ? subtopic.title.trim() : '';
+              const parsed = parseDurationToMinutes(subtopic?.duration);
+              if (!title) return null;
+
+              return {
+                title,
+                minutes: parsed === null ? 60 : parsed
+              };
+            })
+            .filter(Boolean)
+        : []
+    }));
+
+    const allSubtopics = [];
+    normalizedTopics.forEach((topic, topicIndex) => {
+      topic.subtopics.forEach((subtopic, subtopicIndex) => {
+        allSubtopics.push({ topicIndex, subtopicIndex, minutes: subtopic.minutes });
+      });
+    });
+
+    const totalMinutes = allSubtopics.reduce((sum, s) => sum + s.minutes, 0);
+    if (totalMinutes <= maxMinutes) {
+      return normalizedTopics.map((topic) => ({
+        name: topic.name,
+        subtopics: topic.subtopics.map((sub) => ({
+          title: sub.title,
+          duration: formatMinutesAsDuration(sub.minutes)
+        }))
+      }));
+    }
+
+    const scale = maxMinutes / totalMinutes;
+    allSubtopics.forEach(({ topicIndex, subtopicIndex, minutes }) => {
+      normalizedTopics[topicIndex].subtopics[subtopicIndex].minutes = Math.max(15, Math.round(minutes * scale));
+    });
+
+    let adjustedTotal = normalizedTopics.reduce(
+      (sum, topic) => sum + topic.subtopics.reduce((inner, sub) => inner + sub.minutes, 0),
+      0
+    );
+
+    if (adjustedTotal > maxMinutes) {
+      for (let i = normalizedTopics.length - 1; i >= 0 && adjustedTotal > maxMinutes; i -= 1) {
+        const subtopics = normalizedTopics[i].subtopics;
+        for (let j = subtopics.length - 1; j >= 0 && adjustedTotal > maxMinutes; j -= 1) {
+          if (subtopics.length > 1) {
+            adjustedTotal -= subtopics[j].minutes;
+            subtopics.splice(j, 1);
+          }
+        }
+      }
+    }
+
+    return normalizedTopics.map((topic) => ({
+      name: topic.name,
+      subtopics: topic.subtopics.map((sub) => ({
+        title: sub.title,
+        duration: formatMinutesAsDuration(sub.minutes)
+      }))
+    }));
+  };
+
+  const generateFullCoursePlan = async () => {
+    if (!formData.title || formData.title.trim().length < 3) {
+      alert('Please enter a course title first.');
+      return;
+    }
+
+    const hasExistingContent = formData.days.some(
+      (day) => (day.topics || []).some((topic) => (topic.name || '').trim() || (topic.subtopics || []).length > 0)
+    );
+    if (hasExistingContent) {
+      const shouldReplace = window.confirm(
+        'Existing topics/subtopics will be replaced. Do you want to continue?'
+      );
+      if (!shouldReplace) return;
+    }
+
+    setGeneratingFullCourse(true);
+    try {
+      const prompt = `Generate a complete day-wise course plan for "${formData.title}" for ${formData.totalDays} day(s).
+
+Return ONLY valid JSON in this exact shape:
+[
+  {
+    "dayNumber": 1,
+    "topics": [
+      {
+        "name": "Topic name",
+        "subtopics": [
+          { "title": "Subtopic name", "duration": "45 minutes" },
+          { "title": "Subtopic name", "duration": "1 hour" }
+        ]
+      }
+    ]
+  }
+]
+
+Rules:
+- Include all day numbers from 1 to ${formData.totalDays}
+- 3 to 5 topics per day
+- Each topic should have 2 to 4 subtopics
+- Total duration of all subtopics in each day must be 6 hours or less
+- Subtopic durations must be realistic and use only minutes/hours
+- Progressively structured content from fundamentals to advanced
+- No markdown, no explanation, JSON only`;
+
+      // eslint-disable-next-line no-undef
+      const response = await puter.ai.chat(prompt, {
+        model: 'gemini-2.0-flash'
+      });
+
+      const responseText = typeof response === 'string' ? response.trim() : response.message?.content?.trim() || '';
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        throw new Error('No valid JSON array found in AI response');
+      }
+
+      const generatedDays = JSON.parse(jsonMatch[0]);
+      if (!Array.isArray(generatedDays)) {
+        throw new Error('Invalid AI response format');
+      }
+
+      const dayTopicMap = new Map();
+      generatedDays.forEach((item) => {
+        const dayNumber = parseInt(item?.dayNumber, 10);
+        if (Number.isNaN(dayNumber) || dayNumber < 1 || dayNumber > formData.totalDays) return;
+
+        const topics = Array.isArray(item?.topics)
+          ? item.topics
+              .map((topic) => ({
+                name: typeof topic?.name === 'string' ? topic.name.trim() : '',
+                subtopics: Array.isArray(topic?.subtopics)
+                  ? topic.subtopics
+                      .map((subtopic) => ({
+                        title: typeof subtopic?.title === 'string' ? subtopic.title.trim() : '',
+                        duration: typeof subtopic?.duration === 'string' ? subtopic.duration.trim() : '1 hour'
+                      }))
+                      .filter((subtopic) => subtopic.title)
+                  : []
+              }))
+              .filter((topic) => topic.name)
+          : [];
+
+        dayTopicMap.set(dayNumber, normalizeDayToMaxSixHours(topics));
+      });
+
+      const updatedDays = formData.days.map((day) => ({
+        ...day,
+        topics: dayTopicMap.get(day.dayNumber) || []
+      }));
+
+      setFormData((prev) => ({
+        ...prev,
+        days: updatedDays
+      }));
+
+      const expanded = {};
+      updatedDays.forEach((_, index) => {
+        expanded[index] = true;
+      });
+      setExpandedDays(expanded);
+    } catch (error) {
+      console.error('Error generating full course plan:', error);
+      alert('Failed to generate full course plan. Please try again.');
+    } finally {
+      setGeneratingFullCourse(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -215,8 +427,44 @@ Make sure durations are realistic for learning each subtopic.`;
     setFormData(prev => ({ ...prev, days }));
   };
 
+  const validateDailySubtopicDuration = (days) => {
+    const maxMinutes = 6 * 60;
+
+    for (const day of days) {
+      let totalMinutes = 0;
+      const topics = Array.isArray(day.topics) ? day.topics : [];
+
+      for (let topicIndex = 0; topicIndex < topics.length; topicIndex += 1) {
+        const subtopics = Array.isArray(topics[topicIndex].subtopics) ? topics[topicIndex].subtopics : [];
+
+        for (let subtopicIndex = 0; subtopicIndex < subtopics.length; subtopicIndex += 1) {
+          const parsedMinutes = parseDurationToMinutes(subtopics[subtopicIndex].duration);
+
+          if (parsedMinutes === null) {
+            return `Invalid duration at Day ${day.dayNumber}, Topic ${topicIndex + 1}, Subtopic ${subtopicIndex + 1}. Use formats like \"30 minutes\" or \"1.5 hours\".`;
+          }
+
+          totalMinutes += parsedMinutes;
+        }
+      }
+
+      if (totalMinutes > maxMinutes) {
+        return `Day ${day.dayNumber} exceeds 6 hours total subtopic time. Please reduce durations.`;
+      }
+    }
+
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const durationError = validateDailySubtopicDuration(formData.days);
+    if (durationError) {
+      alert(durationError);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -338,6 +586,24 @@ Make sure durations are realistic for learning each subtopic.`;
           <p className="section-info">
             For each day, add topics. Subtopics will be auto-generated based on the topic name, or you can add them manually.
           </p>
+          <div className="topics-ai-actions">
+            <button
+              type="button"
+              className="btn-generate-full-course"
+              onClick={generateFullCoursePlan}
+              disabled={generatingFullCourse || !formData.title}
+            >
+              {generatingFullCourse ? (
+                <>
+                  <FiZap className="spinning" /> Generating Full Course...
+                </>
+              ) : (
+                <>
+                  <FiZap /> One-Click Full Course
+                </>
+              )}
+            </button>
+          </div>
           <div className="days-list">
             {formData.days.map((day, dayIndex) => (
               <div key={dayIndex} className="day-item">
