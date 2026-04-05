@@ -411,24 +411,42 @@ router.post('/generate/:courseId', auth, async (req, res) => {
 });
 
 // Verify certificate
-router.get('/verify/:certificateNumber', async (req, res) => {
+// Verify certificate with verification code
+router.post('/verify', async (req, res) => {
   try {
-    const { certificateNumber } = req.params;
+    const { certificateNumber, verificationCode } = req.body;
 
-    const certificate = await Certificate.findOne({ certificateNumber })
+    if (!certificateNumber || !verificationCode) {
+      return res.status(400).json({
+        valid: false,
+        message: 'Certificate number and verification code are required'
+      });
+    }
+
+    const certificate = await Certificate.findOne({
+      certificateNumber,
+      verificationCode
+    })
       .populate('student', 'name email')
       .populate('course', 'name')
       .populate('teacher', 'name');
 
     if (!certificate) {
-      return res.status(404).json({ 
-        valid: false, 
-        message: 'Certificate not found' 
+      return res.status(404).json({
+        valid: false,
+        message: 'Invalid certificate number or verification code'
+      });
+    }
+
+    if (!certificate.isValid) {
+      return res.status(400).json({
+        valid: false,
+        message: 'This certificate has been invalidated'
       });
     }
 
     res.json({
-      valid: certificate.isValid,
+      valid: true,
       certificate: {
         certificateNumber: certificate.certificateNumber,
         studentName: certificate.studentName,
@@ -436,7 +454,9 @@ router.get('/verify/:certificateNumber', async (req, res) => {
         teacherName: certificate.teacherName,
         issuedAt: certificate.issuedAt,
         verificationCode: certificate.verificationCode,
-        completionStats: certificate.completionStats
+        completionStats: certificate.completionStats,
+        downloadCount: certificate.downloadCount,
+        lastDownloadedAt: certificate.lastDownloadedAt
       }
     });
   } catch (error) {

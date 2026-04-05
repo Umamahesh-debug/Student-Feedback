@@ -24,6 +24,7 @@ const Sidebar = ({ isTeacher = false }) => {
     { path: '/student/attendance', label: 'Attendance', icon: FiCalendar },
     { path: '/student/timetable', label: 'Timetable', icon: FiClock },
     { path: '/student/certificates', label: 'Certificates', icon: FiAward },
+    { path: '/student/verify-certificate', label: 'Verify Certificate', icon: FiFileText },
   ];
 
   const teacherLinks = [
@@ -33,6 +34,7 @@ const Sidebar = ({ isTeacher = false }) => {
     { path: '/teacher/attendance', label: 'Attendance', icon: FiCheckSquare },
     { path: '/teacher/analytics', label: 'Program Analytics', icon: FiBarChart2 },
     { path: '/teacher/timetable', label: 'Timetable', icon: FiClock },
+    { path: '/teacher/verify-certificate', label: 'Verify Certificate', icon: FiFileText },
   ];
 
   const links = isTeacher ? teacherLinks : studentLinks;

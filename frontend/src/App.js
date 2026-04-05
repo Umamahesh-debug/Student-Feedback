@@ -15,6 +15,7 @@ import CourseAnalytics from './pages/CourseAnalytics';
 import AdminDashboard from './pages/AdminDashboard';
 import Documentation from './pages/Documentation';
 import PublicEvaluations from './pages/PublicEvaluations';
+import CertificateVerification from './pages/CertificateVerification';
 import './App.css';
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
           <Route path="/doc" element={<Documentation />} />
           <Route path="/evaluations" element={<PublicEvaluations />} />
           <Route path="/evaluations/:courseId" element={<PublicEvaluations />} />
+          <Route path="/verify-certificate" element={<CertificateVerification />} />
           <Route path="/secret-analytics" element={<SecretAnalytics />} />
           <Route path="/secret-analytics/course/:courseId" element={<CourseAnalytics />} />
           <Route

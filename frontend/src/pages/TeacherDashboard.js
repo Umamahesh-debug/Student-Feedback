@@ -11,6 +11,7 @@ import AttendanceManagement from '../components/teacher/AttendanceManagement';
 import ProgramAnalytics from '../components/teacher/ProgramAnalytics';
 import Timetable from '../components/teacher/Timetable';
 import SurveyAnalytics from '../components/teacher/SurveyAnalytics';
+import CertificateVerification from './CertificateVerification';
 import Profile from './Profile';
 import './Dashboard.css';
 
@@ -31,6 +32,7 @@ const TeacherDashboard = () => {
           <Route path="attendance" element={<AttendanceManagement />} />
           <Route path="analytics" element={<ProgramAnalytics />} />
           <Route path="timetable" element={<Timetable />} />
+          <Route path="verify-certificate" element={<CertificateVerification />} />
           <Route path="profile" element={<Profile />} />
         </Routes>
       </div>
