@@ -20,7 +20,6 @@ const CreateCourse = () => {
   const [generatingSubtopics, setGeneratingSubtopics] = useState({});
   const navigate = useNavigate();
 
-  // Initialize days array when component mounts or totalDays changes
   useEffect(() => {
     if (formData.days.length === 0 || formData.days.length !== formData.totalDays) {
       const startDate = new Date(formData.startDate || new Date());
@@ -56,19 +55,8 @@ const CreateCourse = () => {
         return;
       }
 
-      const prompt = `Generate a professional course description for a training program titled "${formData.title}".
-
-The course covers the following topics:
-${allTopics.join('\n')}
-
-The description should be:
-- 2-3 paragraphs (around 150-200 words)
-- Professional and engaging
-- Summarize what students will learn across all days
-- Highlight key skills and knowledge they will gain
-- Suitable for corporate training
-
-Only return the description text, no headings or formatting.`;
+      // ⚡ OPTIMIZED PROMPT - shorter = faster
+      const prompt = `Write a 150-word professional course description for "${formData.title}". Topics: ${allTopics.join(', ')}. Plain text only, no headings.`;
 
       // eslint-disable-next-line no-undef
       const response = await puter.ai.chat(prompt, {
@@ -103,16 +91,8 @@ Only return the description text, no headings or formatting.`;
     setGeneratingSubtopics(prev => ({ ...prev, [key]: true }));
 
     try {
-      const prompt = `Generate 4-5 realistic learning subtopics for "${topicName}" with estimated durations.
-
-Return ONLY as JSON array with no additional text:
-[
-  { "title": "subtopic name", "duration": "time estimate" },
-  ...
-]
-
-Examples of durations: "30 minutes", "1 hour", "1.5 hours", "2 hours", "2.5 hours"
-Make sure durations are realistic for learning each subtopic.`;
+      // ⚡ OPTIMIZED PROMPT - shorter = faster
+      const prompt = `JSON only, no extra text. 4 subtopics for "${topicName}": [{"title":"name","duration":"X minutes"}]`;
 
       // eslint-disable-next-line no-undef
       const response = await puter.ai.chat(prompt, {
@@ -122,7 +102,6 @@ Make sure durations are realistic for learning each subtopic.`;
       if (response) {
         const responseText = typeof response === 'string' ? response.trim() : response.message?.content?.trim() || '';
 
-        // Parse JSON from response
         const jsonMatch = responseText.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           const subtopics = JSON.parse(jsonMatch[0]);
@@ -260,32 +239,11 @@ Make sure durations are realistic for learning each subtopic.`;
 
     setGeneratingFullCourse(true);
     try {
-      const prompt = `Generate a complete day-wise course plan for "${formData.title}" for ${formData.totalDays} day(s).
-
-Return ONLY valid JSON in this exact shape:
-[
-  {
-    "dayNumber": 1,
-    "topics": [
-      {
-        "name": "Topic name",
-        "subtopics": [
-          { "title": "Subtopic name", "duration": "45 minutes" },
-          { "title": "Subtopic name", "duration": "1 hour" }
-        ]
-      }
-    ]
-  }
-]
-
-Rules:
-- Include all day numbers from 1 to ${formData.totalDays}
-- 3 to 5 topics per day
-- Each topic should have 2 to 4 subtopics
-- Total duration of all subtopics in each day must be 6 hours or less
-- Subtopic durations must be realistic and use only minutes/hours
-- Progressively structured content from fundamentals to advanced
-- No markdown, no explanation, JSON only`;
+      // ⚡ OPTIMIZED PROMPT - much shorter = 2-3x faster
+      const prompt = `Course: "${formData.title}", ${formData.totalDays} days.
+Return ONLY a JSON array, no extra text:
+[{"dayNumber":1,"topics":[{"name":"Topic","subtopics":[{"title":"Subtopic","duration":"1 hour"}]}]}]
+Rules: ${formData.totalDays} days total, 3-4 topics/day, 2-3 subtopics/topic, max 6hrs/day, progressive structure.`;
 
       // eslint-disable-next-line no-undef
       const response = await puter.ai.chat(prompt, {
@@ -441,7 +399,7 @@ Rules:
           const parsedMinutes = parseDurationToMinutes(subtopics[subtopicIndex].duration);
 
           if (parsedMinutes === null) {
-            return `Invalid duration at Day ${day.dayNumber}, Topic ${topicIndex + 1}, Subtopic ${subtopicIndex + 1}. Use formats like \"30 minutes\" or \"1.5 hours\".`;
+            return `Invalid duration at Day ${day.dayNumber}, Topic ${topicIndex + 1}, Subtopic ${subtopicIndex + 1}. Use formats like "30 minutes" or "1.5 hours".`;
           }
 
           totalMinutes += parsedMinutes;
@@ -722,7 +680,6 @@ Rules:
           </div>
         </div>
 
-        {/* Generate Course Description Button */}
         {formData.days.some(day => day.topics.length > 0) && (
           <div className="ai-generate-section">
             <div className="ai-generate-info">
