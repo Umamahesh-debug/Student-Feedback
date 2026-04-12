@@ -13,6 +13,7 @@ const StudentEvaluation = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [attendancePct, setAttendancePct] = useState(0);
+  const [certificateEligibility, setCertificateEligibility] = useState(null);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -27,6 +28,13 @@ const StudentEvaluation = () => {
           (row) => row.course && String(row.course._id) === String(id)
         );
         setAttendancePct(typeof stat?.attendancePercentage === 'number' ? stat.attendancePercentage : 0);
+        try {
+          const eligRes = await api.get(`/certificates/eligibility/${id}`);
+          setCertificateEligibility(eligRes.data);
+        } catch (eligErr) {
+          console.error(eligErr);
+          setCertificateEligibility(null);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -143,6 +151,49 @@ const StudentEvaluation = () => {
             The progress percentage on your course page can differ from that until all days are
             finalized.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (certificateEligibility === null) {
+    return (
+      <div className="evaluation-page">
+        <button className="back-btn" onClick={() => navigate(`/student/courses/${id}`)}>
+          <FiArrowLeft /> Back to course
+        </button>
+        <div className="evaluation-header">
+          <h1>Unable to verify requirements</h1>
+          <p className="progress-text" style={{ maxWidth: 560, lineHeight: 1.5 }}>
+            Could not load certificate status. Refresh the page or go back to the course and try
+            again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (certificateEligibility.hasPendingReviews) {
+    const pending = certificateEligibility.pendingReviews || [];
+    return (
+      <div className="evaluation-page">
+        <button className="back-btn" onClick={() => navigate(`/student/courses/${id}`)}>
+          <FiArrowLeft /> Back to course
+        </button>
+        <div className="evaluation-header">
+          <h1>Complete daily feedback first</h1>
+          <p className="progress-text" style={{ maxWidth: 560, lineHeight: 1.5 }}>
+            Submit star ratings for each completed training day you attended on the course page
+            before overall feedback. Days marked absent do not require feedback.
+          </p>
+          {pending.length > 0 && (
+            <ul style={{ marginTop: 16, paddingLeft: 20, maxWidth: 560 }}>
+              {pending.slice(0, 8).map((p, i) => (
+                <li key={i}>{p.message || `Day ${p.dayNumber}`}</li>
+              ))}
+              {pending.length > 8 && <li>…and more</li>}
+            </ul>
+          )}
         </div>
       </div>
     );

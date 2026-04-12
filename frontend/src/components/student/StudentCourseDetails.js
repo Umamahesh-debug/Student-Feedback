@@ -18,6 +18,7 @@ const StudentCourseDetails = () => {
   const [loading, setLoading] = useState(true);
   const [expandedDays, setExpandedDays] = useState({});
   const [evaluationSubmitted, setEvaluationSubmitted] = useState(false);
+  const [certificateEligibility, setCertificateEligibility] = useState(null);
 
   useEffect(() => {
     fetchCourseData();
@@ -73,6 +74,14 @@ const StudentCourseDetails = () => {
       ]);
 
       setCourse(courseRes.data);
+
+      try {
+        const eligRes = await api.get(`/certificates/eligibility/${id}`);
+        setCertificateEligibility(eligRes.data);
+      } catch (eligErr) {
+        console.error('Eligibility fetch failed:', eligErr);
+        setCertificateEligibility(null);
+      }
 
       // Find enrollment for this course
       const courseEnrollment = enrollmentsRes.data.find(
@@ -146,6 +155,12 @@ const StudentCourseDetails = () => {
       setDayRatings(prev => ({ ...prev, [dayNumber]: res.data }));
       setSelectedRatings(prev => ({ ...prev, [dayNumber]: res.data.rating }));
       setRatingComments(prev => ({ ...prev, [dayNumber]: res.data.comment || '' }));
+      try {
+        const eligRes = await api.get(`/certificates/eligibility/${id}`);
+        setCertificateEligibility(eligRes.data);
+      } catch (_) {
+        /* ignore */
+      }
       alert('Thanks for rating this day!');
     } catch (error) {
       console.error('Failed to submit rating', error);
@@ -217,12 +232,31 @@ const StudentCourseDetails = () => {
     return Boolean(rec && rec.status === 'absent');
   };
 
-  const canGiveFeedback = courseMarkedComplete && courseAttendancePct >= 75;
+  const pendingReviewList = certificateEligibility?.pendingReviews;
+  const hasPendingDayFeedback =
+    !certificateEligibility ||
+    (Array.isArray(pendingReviewList) && pendingReviewList.length > 0);
+
+  const canGiveFeedback =
+    Boolean(certificateEligibility) &&
+    courseMarkedComplete &&
+    courseAttendancePct >= 75 &&
+    !hasPendingDayFeedback;
 
   let overallFeedbackDisabledTitle =
     'Give overall feedback for this course';
   if (!canGiveFeedback) {
-    if (!courseMarkedComplete && courseAttendancePct < 75) {
+    if (!certificateEligibility) {
+      overallFeedbackDisabledTitle =
+        'Unable to verify certificate requirements. Refresh the page or try again shortly.';
+    } else if (
+      courseMarkedComplete &&
+      courseAttendancePct >= 75 &&
+      hasPendingDayFeedback
+    ) {
+      overallFeedbackDisabledTitle =
+        'Submit daily feedback for each completed training day you attended before overall feedback.';
+    } else if (!courseMarkedComplete && courseAttendancePct < 75) {
       overallFeedbackDisabledTitle =
         'All training days must be marked complete by your instructor, and attendance must be at least 75%.';
     } else if (!courseMarkedComplete) {

@@ -25,8 +25,12 @@ const StudentCourses = () => {
       
       // Merge enrollment data with courses
       const coursesWithProgress = coursesRes.data.map(course => {
-        const enrollment = enrollmentsRes.data.find(e => e.course?._id === course._id);
-        const analyticsData = analyticsRes.data.courses?.find(c => c.course?._id === course._id);
+        const enrollment = enrollmentsRes.data.find(
+          (e) => e.course && String(e.course._id) === String(course._id)
+        );
+        const analyticsData = analyticsRes.data.courses?.find(
+          (c) => c.course && String(c.course._id) === String(course._id)
+        );
         return {
           ...course,
           enrollment,

@@ -6,26 +6,10 @@ const CourseSurvey = require('../models/CourseSurvey');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const Attendance = require('../models/Attendance');
-const DayRating = require('../models/DayRating');
 const Evaluation = require('../models/Evaluation');
 const { getStudentCourseAttendancePercent } = require('../utils/attendanceRules');
-
-function getNormalizedCourseDays(course) {
-  if (Array.isArray(course.days) && course.days.length > 0) {
-    return [...course.days].sort((a, b) => Number(a.dayNumber) - Number(b.dayNumber));
-  }
-
-  if (Array.isArray(course.sections) && course.sections.length > 0) {
-    return course.sections.map((section, index) => ({
-      dayNumber: section.dayNumber || index + 1,
-      date: section.date,
-      completed: !!section.completed,
-      sections: section.sections || []
-    }));
-  }
-
-  return [];
-}
+const { getNormalizedCourseDays } = require('../utils/courseSchedule');
+const { getPendingDayReviews } = require('../utils/pendingDayReviews');
 
 // Check certificate eligibility for a course
 router.get('/eligibility/:courseId', auth, async (req, res) => {
@@ -88,7 +72,7 @@ router.get('/eligibility/:courseId', auth, async (req, res) => {
     const meetsAttendanceRequirement = attendancePercentage >= 50;
 
     // Check for pending reviews (day ratings only, not evaluation)
-    const pendingReviews = await checkPendingReviews(studentId, courseId, completedDaysList);
+    const pendingReviews = await getPendingDayReviews(studentId, courseId, course);
 
     // Check if survey already submitted
     const existingSurvey = await CourseSurvey.findOne({
@@ -140,51 +124,6 @@ router.get('/eligibility/:courseId', auth, async (req, res) => {
   }
 });
 
-// Helper function to check pending reviews (only day-wise ratings)
-async function checkPendingReviews(studentId, courseId, completedDays) {
-  const pendingReviews = [];
-
-  const dayRecords = await Attendance.find({ student: studentId, course: courseId }).select(
-    'dayNumber status'
-  );
-  const statusByDay = new Map(dayRecords.map((a) => [Number(a.dayNumber), a.status]));
-
-  // Check day-wise ratings (using DayRating model)
-
-  for (const day of completedDays) {
-    const dn = Number(day.dayNumber);
-    if (statusByDay.get(dn) === 'absent') continue;
-
-    // Check DayRating instead of Feedback
-    const dayRating = await DayRating.findOne({
-      student: studentId,
-      course: courseId,
-      dayNumber: day.dayNumber
-    });
-    
-    if (!dayRating) {
-      // Get topic label from modern topics first, then legacy sections.
-      const topicFromTopics = day.topics && day.topics[0] ? day.topics[0].name : null;
-      const topicFromSections = day.sections && day.sections[0] ? day.sections[0].heading : null;
-      const topic = topicFromTopics || topicFromSections || `Day ${day.dayNumber}`;
-
-      const dayDate = day.date ? new Date(day.date).toLocaleDateString() : `Day ${day.dayNumber}`;
-      pendingReviews.push({
-        type: 'day_feedback',
-        date: day.date,
-        dayNumber: day.dayNumber,
-        topic: topic,
-        message: `Please submit feedback for ${topic} (${dayDate})`
-      });
-    }
-  }
-
-  // Note: Overall course evaluation is now checked separately in eligibility
-  // It's not included in pending reviews since it's tracked via surveySubmitted flag
-
-  return pendingReviews;
-}
-
 // Submit course completion survey
 router.post('/survey/:courseId', auth, async (req, res) => {
   try {
@@ -235,6 +174,15 @@ router.post('/survey/:courseId', auth, async (req, res) => {
     if (attendancePercentage < 75) {
       return res.status(403).json({
         message: 'Survey submission requires at least 75% attendance for this course'
+      });
+    }
+
+    const dayFeedbackPending = await getPendingDayReviews(studentId, courseId, course);
+    if (dayFeedbackPending.length > 0) {
+      return res.status(400).json({
+        message:
+          'Please submit daily feedback for all completed training days you attended before overall feedback',
+        pendingReviews: dayFeedbackPending
       });
     }
 
@@ -331,7 +279,7 @@ router.post('/generate/:courseId', auth, async (req, res) => {
     }
 
     // Check pending reviews
-    const pendingReviews = await checkPendingReviews(studentId, courseId, completedDaysList);
+    const pendingReviews = await getPendingDayReviews(studentId, courseId, course);
     if (pendingReviews.length > 0) {
       return res.status(400).json({ 
         message: 'Please complete all pending reviews before downloading certificate',

@@ -5,6 +5,7 @@ const Evaluation = require('../models/Evaluation');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const { getStudentCourseAttendancePercent } = require('../utils/attendanceRules');
+const { getPendingDayReviews } = require('../utils/pendingDayReviews');
 
 // Evaluation questions data
 const evaluationQuestions = [
@@ -105,6 +106,15 @@ router.post('/', auth, isStudent, async (req, res) => {
     if (attendancePct < 75) {
       return res.status(403).json({
         message: 'Overall feedback requires at least 75% attendance for this course'
+      });
+    }
+
+    const pendingDayFeedback = await getPendingDayReviews(req.user.userId, courseId, course);
+    if (pendingDayFeedback.length > 0) {
+      return res.status(400).json({
+        message:
+          'Please submit daily feedback for all completed training days you attended before overall feedback',
+        pendingReviews: pendingDayFeedback
       });
     }
 
