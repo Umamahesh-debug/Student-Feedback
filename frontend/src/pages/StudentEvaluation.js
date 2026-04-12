@@ -11,12 +11,21 @@ const StudentEvaluation = () => {
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [attendancePct, setAttendancePct] = useState(0);
 
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const res = await api.get(`/courses/${id}`);
-        setCourse(res.data);
+        const [courseRes, attRes] = await Promise.all([
+          api.get(`/courses/${id}`),
+          api.get(`/attendance/my-attendance?courseId=${id}`)
+        ]);
+        setCourse(courseRes.data);
+        const attendanceRows = Array.isArray(attRes.data) ? attRes.data : [];
+        const stat = attendanceRows.find(
+          (row) => row.course && String(row.course._id) === String(id)
+        );
+        setAttendancePct(typeof stat?.attendancePercentage === 'number' ? stat.attendancePercentage : 0);
       } catch (err) {
         console.error(err);
       } finally {
@@ -104,10 +113,35 @@ const StudentEvaluation = () => {
   const answeredCount = Object.keys(answers).length;
   const progressPercent = Math.round((answeredCount / questions.length) * 100);
 
-  if (loading || !course) {
+  if (loading) {
+    return (
+      <div className="evaluation-page">
+        <div className="error-message">Loading…</div>
+      </div>
+    );
+  }
+
+  if (!course) {
     return (
       <div className="evaluation-page">
         <div className="error-message">Course not found</div>
+      </div>
+    );
+  }
+
+  if (attendancePct < 75) {
+    return (
+      <div className="evaluation-page">
+        <button className="back-btn" onClick={() => navigate(`/student/courses/${id}`)}>
+          <FiArrowLeft /> Back to course
+        </button>
+        <div className="evaluation-header">
+          <h1>Course evaluation unavailable</h1>
+          <p className="progress-text" style={{ maxWidth: 560, lineHeight: 1.5 }}>
+            Overall course feedback is only available when your attendance for this course is at least
+            75%. Your current attendance is {attendancePct}%.
+          </p>
+        </div>
       </div>
     );
   }

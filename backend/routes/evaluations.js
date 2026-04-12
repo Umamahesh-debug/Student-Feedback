@@ -4,6 +4,7 @@ const { auth, isStudent, isTeacher } = require('../middleware/auth');
 const Evaluation = require('../models/Evaluation');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const { getStudentCourseAttendancePercent } = require('../utils/attendanceRules');
 
 // Evaluation questions data
 const evaluationQuestions = [
@@ -96,6 +97,16 @@ router.post('/', auth, isStudent, async (req, res) => {
       enrollment = await Enrollment.findOne({ student: req.user.userId, course: courseId });
     }
     if (!enrollment) return res.status(403).json({ message: 'Not enrolled in this course' });
+
+    const { percentage: attendancePct } = await getStudentCourseAttendancePercent(
+      req.user.userId,
+      course
+    );
+    if (attendancePct < 75) {
+      return res.status(403).json({
+        message: 'Overall feedback requires at least 75% attendance for this course'
+      });
+    }
 
     // Prevent duplicate submission
     const existing = await Evaluation.findOne({ student: req.user.userId, course: courseId });

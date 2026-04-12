@@ -8,6 +8,7 @@ const Enrollment = require('../models/Enrollment');
 const Attendance = require('../models/Attendance');
 const DayRating = require('../models/DayRating');
 const Evaluation = require('../models/Evaluation');
+const { getStudentCourseAttendancePercent } = require('../utils/attendanceRules');
 
 function getNormalizedCourseDays(course) {
   if (Array.isArray(course.days) && course.days.length > 0) {
@@ -142,10 +143,18 @@ router.get('/eligibility/:courseId', auth, async (req, res) => {
 // Helper function to check pending reviews (only day-wise ratings)
 async function checkPendingReviews(studentId, courseId, completedDays) {
   const pendingReviews = [];
-  
+
+  const dayRecords = await Attendance.find({ student: studentId, course: courseId }).select(
+    'dayNumber status'
+  );
+  const statusByDay = new Map(dayRecords.map((a) => [Number(a.dayNumber), a.status]));
+
   // Check day-wise ratings (using DayRating model)
 
   for (const day of completedDays) {
+    const dn = Number(day.dayNumber);
+    if (statusByDay.get(dn) === 'absent') continue;
+
     // Check DayRating instead of Feedback
     const dayRating = await DayRating.findOne({
       student: studentId,
@@ -217,17 +226,17 @@ router.post('/survey/:courseId', auth, async (req, res) => {
       return res.status(404).json({ message: 'Course not found' });
     }
 
-    // Get attendance stats from normalized days
-    const courseDays = getNormalizedCourseDays(course);
-    const completedDays = courseDays.filter((d) => d.completed === true).length;
-    const totalDays = completedDays > 0 ? completedDays : (course.totalDays || courseDays.length);
-    const attendanceRecords = await Attendance.find({
-      course: courseId,
-      student: studentId,
-      status: 'present'
-    });
-    const attendedDays = new Set(attendanceRecords.map((a) => Number(a.dayNumber))).size;
-    const attendancePercentage = totalDays > 0 ? Math.round((attendedDays / totalDays) * 100) : 0;
+    const {
+      scheduledDays: totalDays,
+      presentDays: attendedDays,
+      percentage: attendancePercentage
+    } = await getStudentCourseAttendancePercent(studentId, course);
+
+    if (attendancePercentage < 75) {
+      return res.status(403).json({
+        message: 'Survey submission requires at least 75% attendance for this course'
+      });
+    }
 
     // Create survey
     const survey = new CourseSurvey({

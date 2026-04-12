@@ -4,6 +4,7 @@ const { auth, isStudent, isTeacher } = require('../middleware/auth');
 const DayRating = require('../models/DayRating');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const { wasAbsentOnDay } = require('../utils/attendanceRules');
 
 // Student submits a rating for a completed day
 router.post('/day', auth, isStudent, async (req, res) => {
@@ -46,6 +47,12 @@ router.post('/day', auth, isStudent, async (req, res) => {
     
     if (!enrollment) {
       return res.status(403).json({ message: 'Not enrolled in this course' });
+    }
+
+    if (await wasAbsentOnDay(req.user.userId, courseId, dayNum)) {
+      return res.status(403).json({
+        message: 'You cannot submit daily feedback for a day you were marked absent'
+      });
     }
 
     // Prevent multiple ratings per student per day - allow update if exists

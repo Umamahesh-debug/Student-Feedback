@@ -207,9 +207,17 @@ const StudentCourseDetails = () => {
   // Check if all days are completed
   const totalDays = course.totalDays || 0;
   const allDaysCompleted = daysCompleted === totalDays && totalDays > 0;
-  
-  // Enable feedback button only if all days completed AND progress > 50%
-  const canGiveFeedback = allDaysCompleted && progress > 50;
+
+  const presentDaysForCourse = attendance.filter((a) => a.status === 'present').length;
+  const courseAttendancePct =
+    totalDays > 0 ? Math.round((presentDaysForCourse / totalDays) * 100) : 0;
+
+  const isAbsentForDay = (dayNumber) => {
+    const rec = attendance.find((a) => Number(a.dayNumber) === Number(dayNumber));
+    return Boolean(rec && rec.status === 'absent');
+  };
+
+  const canGiveFeedback = allDaysCompleted && courseAttendancePct >= 75;
 
   return (
     <div className="course-details-container">
@@ -276,7 +284,11 @@ const StudentCourseDetails = () => {
               className="overall-feedback-btn"
               onClick={() => navigate(`/student/evaluation/${id}`)}
               disabled={!canGiveFeedback}
-              title={!canGiveFeedback ? 'Complete all days and achieve >50% progress to give feedback' : 'Give overall feedback for this course'}
+              title={
+                !canGiveFeedback
+                  ? 'Complete all course days with at least 75% attendance to give overall feedback'
+                  : 'Give overall feedback for this course'
+              }
             >
               Give Overall Feedback
             </button>
@@ -456,7 +468,11 @@ const StudentCourseDetails = () => {
                           {/* Rating UI: show if day marked completed by teacher */}
                           <div className="day-rating">
                             {isCompleted ? (
-                              dayRatings[day.dayNumber] ? (
+                              isAbsentForDay(day.dayNumber) ? (
+                                <div className="not-yet" style={{ borderLeft: '3px solid #f59e0b' }}>
+                                  You were marked absent for this day, so daily feedback is not available.
+                                </div>
+                              ) : dayRatings[day.dayNumber] ? (
                                 <div className="rated-info">
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <div className="stars-wrapper">
@@ -626,7 +642,11 @@ const StudentCourseDetails = () => {
                             {/* Rating UI: show if day marked completed by teacher */}
                             <div className="day-rating">
                               {isCompleted ? (
-                                dayRatings[day.dayNumber] ? (
+                                isAbsentForDay(day.dayNumber) ? (
+                                  <div className="not-yet" style={{ borderLeft: '3px solid #f59e0b' }}>
+                                    You were marked absent for this day, so daily feedback is not available.
+                                  </div>
+                                ) : dayRatings[day.dayNumber] ? (
                                   <div className="rated-info">
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                       <div className="stars-wrapper">
