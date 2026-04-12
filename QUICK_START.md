@@ -47,15 +47,9 @@ The frontend will start on `http://localhost:3000`
 ### Verify Teacher (For Testing)
 After registering as teacher, you can verify yourself using the API:
 ```bash
-# Get your user ID from the response, then:
-curl -X PUT http://localhost:5000/api/users/verify-teacher/YOUR_USER_ID \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
 
-Or use Postman/Thunder Client with:
-- Method: PUT
-- URL: `http://localhost:5000/api/users/verify-teacher/YOUR_USER_ID`
-- Headers: `Authorization: Bearer YOUR_TOKEN`
+####### SAME STEPS USED IN PRODUCTION ALSO ########
+
 
 ### Create a Student Account
 1. Go to Register page
@@ -164,5 +158,14 @@ Token is automatically included from localStorage after login.
 3. Mark attendance
 4. View analytics
 5. Generate reports
+
+Now 
+# 🎓 Student Feedback System
+
+## 🌐 Live Production Links
+student and teacher : https://student-feedback-zlcp.vercel.app/login
+login using the above link and follow the STEPS PREVIOUSLY DISCUSSED
+
+Admin :  https://student-feedback-zlcp.vercel.app/admin
 
 Enjoy using the Student Feedback System! 🎓
