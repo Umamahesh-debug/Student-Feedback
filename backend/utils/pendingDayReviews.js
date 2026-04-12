@@ -6,6 +6,17 @@ const { getNormalizedCourseDays } = require('./courseSchedule');
  * Days where the student must submit a day rating: teacher-marked completed days,
  * excluding days marked absent. Skips only explicit "absent"; "not marked" still requires feedback.
  */
+async function findDayRatingForDay(studentId, courseId, dn) {
+  const n = Number(dn);
+  let r = await DayRating.findOne({ student: studentId, course: courseId, dayNumber: n });
+  if (r) return r;
+  return DayRating.findOne({
+    student: studentId,
+    course: courseId,
+    dayNumber: { $in: [n, String(n)] }
+  });
+}
+
 async function getPendingDayReviewsForCompletedDays(studentId, courseId, completedDays) {
   const pendingReviews = [];
 
@@ -18,11 +29,7 @@ async function getPendingDayReviewsForCompletedDays(studentId, courseId, complet
     const dn = Number(day.dayNumber);
     if (statusByDay.get(dn) === 'absent') continue;
 
-    const dayRating = await DayRating.findOne({
-      student: studentId,
-      course: courseId,
-      dayNumber: Number(day.dayNumber)
-    });
+    const dayRating = await findDayRatingForDay(studentId, courseId, day.dayNumber);
 
     if (!dayRating) {
       const topicFromTopics = day.topics && day.topics[0] ? day.topics[0].name : null;

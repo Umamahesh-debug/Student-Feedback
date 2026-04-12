@@ -426,12 +426,16 @@ const CourseCertificate = () => {
                 </div>
               </div>
 
-              <div className={`requirement ${eligibility.meetsAttendanceRequirement ? 'met' : 'not-met'}`}>
-                <span className="icon">{eligibility.meetsAttendanceRequirement ? '✓' : '○'}</span>
+              <div className={`requirement ${(eligibility.meetsEvaluationAttendanceRequirement ?? eligibility.attendancePercentage >= 75) ? 'met' : 'not-met'}`}>
+                <span className="icon">{(eligibility.meetsEvaluationAttendanceRequirement ?? eligibility.attendancePercentage >= 75) ? '✓' : '○'}</span>
                 <div className="requirement-details">
-                  <span className="requirement-title">Attendance ≥ 50%</span>
+                  <span className="requirement-title">Attendance ≥ 75%</span>
                   <span className="requirement-status">
-                    {eligibility.attendancePercentage}% ({eligibility.attendedDays}/{eligibility.completedDays} days)
+                    {eligibility.attendancePercentage}% (
+                    {typeof eligibility.attendedDays === 'number' ? eligibility.attendedDays : '—'} present
+                    {typeof eligibility.attendanceScheduledDays === 'number'
+                      ? ` of ${eligibility.attendanceScheduledDays} scheduled days)`
+                      : ` of ${eligibility.totalDays ?? '?'} days)`}
                   </span>
                 </div>
               </div>
@@ -478,7 +482,7 @@ const CourseCertificate = () => {
 
             {!eligibility.hasPendingReviews && 
              eligibility.isCourseCompleted && 
-             eligibility.meetsAttendanceRequirement && 
+             (eligibility.meetsEvaluationAttendanceRequirement ?? eligibility.attendancePercentage >= 75) && 
              !eligibility.surveySubmitted && (
               <button 
                 className="btn-primary btn-large"
@@ -504,9 +508,14 @@ const CourseCertificate = () => {
               </div>
             )}
 
-            {!eligibility.meetsAttendanceRequirement && eligibility.isCourseCompleted && (
+            {eligibility.isCourseCompleted &&
+             !(eligibility.meetsEvaluationAttendanceRequirement ?? eligibility.attendancePercentage >= 75) && (
               <div className="warning-message">
-                <p>Your attendance ({eligibility.attendancePercentage}%) is below the required 50%. Unfortunately, you are not eligible for a certificate.</p>
+                <p>
+                  Your attendance ({eligibility.attendancePercentage}%) is below the required 75%. Complete more
+                  attended days or contact your instructor. Certificates require at least 75% attendance, plus
+                  daily feedback, overall feedback, and a fully completed course.
+                </p>
               </div>
             )}
           </div>

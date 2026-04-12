@@ -55,8 +55,12 @@ router.post('/day', auth, isStudent, async (req, res) => {
       });
     }
 
-    // Prevent multiple ratings per student per day - allow update if exists
-    const existing = await DayRating.findOne({ student: req.user.userId, course: courseId, dayNumber });
+    // Prevent multiple ratings per student per day - allow update if exists (dayNumber stored as Number)
+    const existing = await DayRating.findOne({
+      student: req.user.userId,
+      course: courseId,
+      dayNumber: dayNum
+    });
     if (existing) {
       // Update existing rating
       existing.rating = rating;
@@ -69,7 +73,7 @@ router.post('/day', auth, isStudent, async (req, res) => {
     const dr = new DayRating({
       student: req.user.userId,
       course: courseId,
-      dayNumber,
+      dayNumber: dayNum,
       rating,
       comment: comment || ''
     });
@@ -86,7 +90,15 @@ router.post('/day', auth, isStudent, async (req, res) => {
 router.get('/my', auth, isStudent, async (req, res) => {
   try {
     const { courseId, dayNumber } = req.query;
-    const rating = await DayRating.findOne({ student: req.user.userId, course: courseId, dayNumber });
+    const dn = parseInt(dayNumber, 10);
+    if (Number.isNaN(dn)) {
+      return res.status(400).json({ message: 'Invalid dayNumber' });
+    }
+    const rating = await DayRating.findOne({
+      student: req.user.userId,
+      course: courseId,
+      dayNumber: dn
+    });
     res.json(rating || null);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

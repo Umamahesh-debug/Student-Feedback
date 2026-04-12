@@ -50,26 +50,18 @@ router.get('/eligibility/:courseId', auth, async (req, res) => {
     const completedDays = completedDaysList.length;
     const isCourseCompleted = totalScheduledDays > 0 && completedDays >= totalScheduledDays;
 
-    // Get attendance records
-    const attendanceRecords = await Attendance.find({
-      course: courseId,
-      student: studentId
-    });
+    const {
+      scheduledDays: attendanceScheduledDays,
+      presentDays: attendedScheduledDays,
+      percentage: scheduleAttendancePct
+    } = await getStudentCourseAttendancePercent(studentId, course);
 
-    const presentDayNumbers = new Set(
-      attendanceRecords
-        .filter((a) => a.status === 'present')
-        .map((a) => Number(a.dayNumber))
-        .filter((n) => !Number.isNaN(n))
-    );
-    const presentDays = presentDayNumbers.size;
-    const attendanceBaseDays = completedDays > 0 ? completedDays : totalScheduledDays;
-    const attendancePercentage = attendanceBaseDays > 0
-      ? Math.round((presentDays / attendanceBaseDays) * 100)
-      : 0;
+    // Same formula as My Attendance & evaluation (present ÷ scheduled course days)
+    const attendancePercentage = scheduleAttendancePct;
+    const attendedDays = attendedScheduledDays;
 
-    // Check if attendance meets minimum requirement (50%)
     const meetsAttendanceRequirement = attendancePercentage >= 50;
+    const meetsEvaluationAttendanceRequirement = attendancePercentage >= 75;
 
     // Check for pending reviews (day ratings only, not evaluation)
     const pendingReviews = await getPendingDayReviews(studentId, courseId, course);
@@ -102,9 +94,11 @@ router.get('/eligibility/:courseId', auth, async (req, res) => {
       isCourseCompleted,
       totalDays: totalScheduledDays,
       completedDays,
-      attendedDays: presentDays,
+      attendanceScheduledDays,
+      attendedDays,
       attendancePercentage,
       meetsAttendanceRequirement,
+      meetsEvaluationAttendanceRequirement,
       pendingReviews,
       hasPendingReviews: pendingReviews.length > 0,
       surveySubmitted: surveyOrEvalCompleted,
@@ -112,7 +106,7 @@ router.get('/eligibility/:courseId', auth, async (req, res) => {
       certificateIssued: !!existingCertificate,
       certificateNumber: existingCertificate?.certificateNumber || null,
       canDownloadCertificate: isCourseCompleted && 
-                              meetsAttendanceRequirement && 
+                              meetsEvaluationAttendanceRequirement &&
                               pendingReviews.length === 0 && 
                               surveyOrEvalCompleted
     };
@@ -261,20 +255,13 @@ router.post('/generate/:courseId', auth, async (req, res) => {
       return res.status(400).json({ message: 'Course is not yet completed' });
     }
 
-    // Check attendance
-    const attendanceRecords = await Attendance.find({
-      course: courseId,
-      student: studentId,
-      status: 'present'
-    });
-    const presentDayNumbers = new Set(attendanceRecords.map((a) => Number(a.dayNumber)));
-    const attendancePercentage = completedDays > 0
-      ? Math.round((presentDayNumbers.size / completedDays) * 100)
-      : 0;
+    const { presentDays: genPresentDays, percentage: genAttendancePct, scheduledDays: genScheduled } =
+      await getStudentCourseAttendancePercent(studentId, course);
 
-    if (attendancePercentage < 50) {
-      return res.status(400).json({ 
-        message: 'Attendance requirement not met. Minimum 50% attendance required.' 
+    if (genAttendancePct < 75) {
+      return res.status(400).json({
+        message:
+          'Attendance requirement not met. At least 75% attendance is required to receive a certificate.'
       });
     }
 
@@ -324,9 +311,9 @@ router.post('/generate/:courseId', auth, async (req, res) => {
         courseName: course.title || course.name,
         teacherName: course.teacher.name,
         completionStats: {
-          totalDays: completedDays,
-          attendedDays: presentDayNumbers.size,
-          attendancePercentage,
+          totalDays: genScheduled || completedDays,
+          attendedDays: genPresentDays,
+          attendancePercentage: genAttendancePct,
           courseStartDate: courseDays[0]?.date,
           courseEndDate: courseDays[courseDays.length - 1]?.date
         },
