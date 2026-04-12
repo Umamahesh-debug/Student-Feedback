@@ -34,7 +34,7 @@ const MyCertificates = () => {
         <div className="no-certificates">
           <div className="empty-icon">📜</div>
           <h3>No Certificates Yet</h3>
-          <p>Complete courses with minimum 50% attendance to earn certificates.</p>
+          <p>Complete courses with at least 75% attendance, daily feedback, and overall feedback to earn certificates.</p>
           <Link to="/student/courses" className="btn-primary">
             Browse My Courses
           </Link>
