@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { isCourseCompletedForEvaluation } from '../utils/courseCompletion';
 import { FiArrowLeft, FiCheckCircle, FiSend } from 'react-icons/fi';
 import './StudentEvaluation.css';
 
@@ -125,6 +126,24 @@ const StudentEvaluation = () => {
     return (
       <div className="evaluation-page">
         <div className="error-message">Course not found</div>
+      </div>
+    );
+  }
+
+  if (!isCourseCompletedForEvaluation(course)) {
+    return (
+      <div className="evaluation-page">
+        <button className="back-btn" onClick={() => navigate(`/student/courses/${id}`)}>
+          <FiArrowLeft /> Back to course
+        </button>
+        <div className="evaluation-header">
+          <h1>Course evaluation not open yet</h1>
+          <p className="progress-text" style={{ maxWidth: 560, lineHeight: 1.5 }}>
+            Overall feedback opens after your instructor marks every day of this course as complete.
+            The progress percentage on your course page can differ from that until all days are
+            finalized.
+          </p>
+        </div>
       </div>
     );
   }

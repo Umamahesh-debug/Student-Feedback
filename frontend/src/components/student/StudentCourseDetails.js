@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../utils/api';
+import { isCourseCompletedForEvaluation } from '../../utils/courseCompletion';
 import { FiArrowLeft, FiCheckCircle, FiClock, FiCalendar, FiBook, FiUser, FiChevronDown, FiChevronUp, FiAward, FiTarget } from 'react-icons/fi';
 import './StudentCourseDetails.css';
 
@@ -75,14 +76,14 @@ const StudentCourseDetails = () => {
 
       // Find enrollment for this course
       const courseEnrollment = enrollmentsRes.data.find(
-        e => e.course && e.course._id === id
+        (e) => e.course && String(e.course._id) === String(id)
       );
       setEnrollment(courseEnrollment);
 
       // Get attendance records for this course
       const attendanceData = Array.isArray(attendanceRes.data) ? attendanceRes.data : [];
       const courseAttendance = attendanceData.find(
-        a => a.course && a.course._id === id
+        (a) => a.course && String(a.course._id) === String(id)
       );
       setAttendance(courseAttendance?.records || []);
 
@@ -204,9 +205,8 @@ const StudentCourseDetails = () => {
   const daysCompleted = enrollment?.daysCompleted || 0;
   const progressColor = getProgressColor(progress);
 
-  // Check if all days are completed
   const totalDays = course.totalDays || 0;
-  const allDaysCompleted = daysCompleted === totalDays && totalDays > 0;
+  const courseMarkedComplete = isCourseCompletedForEvaluation(course);
 
   const presentDaysForCourse = attendance.filter((a) => a.status === 'present').length;
   const courseAttendancePct =
@@ -217,7 +217,21 @@ const StudentCourseDetails = () => {
     return Boolean(rec && rec.status === 'absent');
   };
 
-  const canGiveFeedback = allDaysCompleted && courseAttendancePct >= 75;
+  const canGiveFeedback = courseMarkedComplete && courseAttendancePct >= 75;
+
+  let overallFeedbackDisabledTitle =
+    'Give overall feedback for this course';
+  if (!canGiveFeedback) {
+    if (!courseMarkedComplete && courseAttendancePct < 75) {
+      overallFeedbackDisabledTitle =
+        'All training days must be marked complete by your instructor, and attendance must be at least 75%.';
+    } else if (!courseMarkedComplete) {
+      overallFeedbackDisabledTitle =
+        'All training days must be marked complete by your instructor before you can give overall feedback.';
+    } else {
+      overallFeedbackDisabledTitle = `Your attendance is ${courseAttendancePct}%. At least 75% is required for overall feedback.`;
+    }
+  }
 
   return (
     <div className="course-details-container">
@@ -284,11 +298,7 @@ const StudentCourseDetails = () => {
               className="overall-feedback-btn"
               onClick={() => navigate(`/student/evaluation/${id}`)}
               disabled={!canGiveFeedback}
-              title={
-                !canGiveFeedback
-                  ? 'Complete all course days with at least 75% attendance to give overall feedback'
-                  : 'Give overall feedback for this course'
-              }
+              title={overallFeedbackDisabledTitle}
             >
               Give Overall Feedback
             </button>
@@ -309,6 +319,13 @@ const StudentCourseDetails = () => {
           <div className="progress-stat">
             <FiCheckCircle style={{ color: progressColor }} />
             <span>{daysCompleted} of {course.totalDays} days completed</span>
+          </div>
+          <div className="progress-stat">
+            <FiUser style={{ color: '#0ea5e9' }} />
+            <span>
+              Attendance: {courseAttendancePct}%
+              {totalDays > 0 ? ` (${presentDaysForCourse} of ${totalDays} days present)` : ''}
+            </span>
           </div>
           <div className="progress-stat">
             <FiClock style={{ color: '#6b7280' }} />
