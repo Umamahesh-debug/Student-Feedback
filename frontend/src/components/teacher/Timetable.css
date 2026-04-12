@@ -95,6 +95,16 @@
   box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
 }
 
+.timetable-day-card.today {
+  border-color: #0d9488;
+  background: #f0fdfa;
+}
+
+.day-title-preview {
+  font-size: 13px;
+  color: #555;
+}
+
 .timetable-day-header {
   background: white;
   padding: 15px 20px;

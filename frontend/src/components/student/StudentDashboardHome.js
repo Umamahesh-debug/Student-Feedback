@@ -108,10 +108,7 @@ const StudentDashboardHome = () => {
           c && c.course && c.enrollment && c.enrollment.progress >= 100
         );
       case 'pending':
-        // Pending approval courses (enrollment status = pending)
-        return stats.courses.filter(c => 
-          c && c.course && c.enrollment && c.enrollment.status === 'pending'
-        );
+        return (stats.pendingCourses || []).filter((c) => c && c.course);
       default:
         return [];
     }
@@ -233,7 +230,9 @@ const StudentDashboardHome = () => {
               {courses.slice(0, 3).map((course) => {
                 if (!course || !course._id) return null;
                 
-                const enrollment = stats?.courses?.find(c => c.course && c.course._id === course._id)?.enrollment;
+                const enrollment = stats?.courses?.find(
+                  (c) => c.course && String(c.course._id) === String(course._id)
+                )?.enrollment;
                 const progress = enrollment?.progress || 0;
                 const daysCompleted = enrollment?.daysCompleted || 0;
                 const status = progress === 100 ? 'Completed' : 'In Progress';

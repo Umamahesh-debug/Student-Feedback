@@ -103,22 +103,24 @@ router.get('/student-dashboard', auth, isStudent, async (req, res) => {
 
     const approvedEnrollments = enrollments.filter(e => e.status === 'approved');
     const pendingEnrollments = enrollments.filter(e => e.status === 'pending');
+    const approvedWithCourse = approvedEnrollments.filter(e => e.course);
+    const pendingWithCourse = pendingEnrollments.filter(e => e.course);
 
-    const totalEnrolled = approvedEnrollments.length;
-    const inProgress = approvedEnrollments.filter(e => 
-      e.course && e.course.status === 'active' && e.progress < 100
+    const totalEnrolled = approvedWithCourse.length;
+    const inProgress = approvedWithCourse.filter(e => 
+      e.course.status === 'active' && e.progress < 100
     ).length;
-    const completed = approvedEnrollments.filter(e => e.progress === 100).length;
+    const completed = approvedWithCourse.filter(e => e.progress === 100).length;
 
     // Calculate overall attendance
-    const courseIds = approvedEnrollments.map(e => e.course?._id).filter(Boolean);
+    const courseIds = approvedWithCourse.map(e => e.course._id).filter(Boolean);
     const attendanceRecords = await Attendance.find({ 
       student: studentId, 
       course: { $in: courseIds } 
     });
 
     const presentCount = attendanceRecords.filter(a => a.status === 'present').length;
-    const totalDays = approvedEnrollments.reduce((sum, e) => sum + (e.course?.totalDays || 0), 0);
+    const totalDays = approvedWithCourse.reduce((sum, e) => sum + (e.course?.totalDays || 0), 0);
     const overallAttendance = totalDays > 0 
       ? Math.round((presentCount / totalDays) * 100)
       : 0;
@@ -128,15 +130,19 @@ router.get('/student-dashboard', auth, isStudent, async (req, res) => {
       inProgress,
       completed,
       overallAttendance,
-      pendingApprovals: pendingEnrollments.length,
-      courses: approvedEnrollments
-        .filter(e => e.course) // Filter out enrollments with null courses
-        .map(e => ({
-          course: e.course,
-          progress: e.progress,
-          daysCompleted: e.daysCompleted,
-          enrollment: e
-        }))
+      pendingApprovals: pendingWithCourse.length,
+      pendingCourses: pendingWithCourse.map(e => ({
+        course: e.course,
+        progress: e.progress,
+        daysCompleted: e.daysCompleted,
+        enrollment: e
+      })),
+      courses: approvedWithCourse.map(e => ({
+        course: e.course,
+        progress: e.progress,
+        daysCompleted: e.daysCompleted,
+        enrollment: e
+      }))
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
