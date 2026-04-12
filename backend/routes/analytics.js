@@ -6,6 +6,31 @@ const Enrollment = require('../models/Enrollment');
 const Attendance = require('../models/Attendance');
 const Feedback = require('../models/Feedback');
 
+/**
+ * Teacher-facing "day completion" counts stored days marked complete.
+ * Current schema: `course.days`; legacy: `course.sections`.
+ */
+function getDayCompletionStats(course) {
+  const days = Array.isArray(course.days) ? course.days : [];
+  if (days.length > 0) {
+    return {
+      scheduledDays: days.length,
+      completedDays: days.filter((d) => d && d.completed === true).length
+    };
+  }
+  const sections = Array.isArray(course.sections) ? course.sections : [];
+  if (sections.length > 0) {
+    return {
+      scheduledDays: sections.length,
+      completedDays: sections.filter((s) => s && s.completed === true).length
+    };
+  }
+  return {
+    scheduledDays: course.totalDays || 0,
+    completedDays: 0
+  };
+}
+
 // Get dashboard analytics (teacher)
 router.get('/dashboard', auth, isTeacher, async (req, res) => {
   try {
@@ -42,12 +67,11 @@ router.get('/dashboard', auth, isTeacher, async (req, res) => {
     // This is calculated as: (total completed days / total days) * 100
     let totalDays = 0;
     let completedDays = 0;
-    
-    courses.forEach(course => {
-      if (course.sections && course.sections.length > 0) {
-        totalDays += course.sections.length;
-        completedDays += course.sections.filter(s => s.completed).length;
-      }
+
+    courses.forEach((course) => {
+      const { scheduledDays, completedDays: done } = getDayCompletionStats(course);
+      totalDays += scheduledDays;
+      completedDays += done;
     });
     
     const completionRate = totalDays > 0 
@@ -57,14 +81,17 @@ router.get('/dashboard', auth, isTeacher, async (req, res) => {
     // Get active courses list
     const activeCoursesData = courses
       .filter(c => c.status === 'active')
-      .map(c => ({
-        _id: c._id,
-        title: c.title,
-        courseCode: c.courseCode,
-        totalDays: c.totalDays,
-        completedDays: c.sections ? c.sections.filter(s => s.completed).length : 0,
-        enrolledCount: approvedEnrollments.filter(e => e.course.toString() === c._id.toString()).length
-      }));
+      .map(c => {
+        const { completedDays: courseCompleted } = getDayCompletionStats(c);
+        return {
+          _id: c._id,
+          title: c.title,
+          courseCode: c.courseCode,
+          totalDays: c.totalDays,
+          completedDays: courseCompleted,
+          enrolledCount: approvedEnrollments.filter(e => e.course.toString() === c._id.toString()).length
+        };
+      });
 
     res.json({
       totalCourses,
@@ -77,8 +104,8 @@ router.get('/dashboard', auth, isTeacher, async (req, res) => {
       completedDays,
       activeCoursesData,
       courses: courses.map(c => {
-        const courseCompletedDays = c.sections ? c.sections.filter(s => s.completed).length : 0;
-        const courseTotalDays = c.sections ? c.sections.length : 0;
+        const { scheduledDays, completedDays: courseCompletedDays } = getDayCompletionStats(c);
+        const courseTotalDays = scheduledDays || c.totalDays || 0;
         return {
           ...c.toObject(),
           enrolledCount: approvedEnrollments.filter(e => e.course.toString() === c._id.toString()).length,
@@ -172,8 +199,7 @@ router.get('/effectiveness', auth, isTeacher, async (req, res) => {
       );
 
       // Calculate completion rate based on day-to-day completion
-      const completedDays = course.sections ? course.sections.filter(s => s.completed).length : 0;
-      const totalDays = course.sections ? course.sections.length : 0;
+      const { scheduledDays: totalDays, completedDays } = getDayCompletionStats(course);
       const completionRate = totalDays > 0
         ? Math.round((completedDays / totalDays) * 100)
         : 0;
