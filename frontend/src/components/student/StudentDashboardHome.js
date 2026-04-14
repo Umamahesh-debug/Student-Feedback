@@ -265,7 +265,8 @@ const StudentDashboardHome = () => {
                             navigate(`/student/certificate/${course._id}`);
                           }}
                         >
-                          <FiAward /> Certificate &amp; requirements
+                          <FiAward />
+                          <span>View certificate requirements</span>
                         </button>
                       )}
                     </div>
