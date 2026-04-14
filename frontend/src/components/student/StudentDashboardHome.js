@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import { FiBook, FiClock, FiCheckCircle, FiUserCheck, FiAlertCircle, FiX, FiArrowRight, FiAward } from 'react-icons/fi';
+import { FiBook, FiClock, FiCheckCircle, FiUserCheck, FiAlertCircle, FiX, FiArrowRight } from 'react-icons/fi';
 import './StudentDashboard.css';
 
 const StudentDashboardHome = () => {
@@ -256,19 +256,6 @@ const StudentDashboardHome = () => {
                       <p className="progress-text">
                         {daysCompleted} / {course.totalDays || 0} days completed
                       </p>
-                      {progress === 100 && (
-                        <button
-                          type="button"
-                          className="btn-cert-dashboard"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/student/certificate/${course._id}`);
-                          }}
-                        >
-                          <FiAward />
-                          <span>View certificate requirements</span>
-                        </button>
-                      )}
                     </div>
                     {course.sections && course.sections.length > 0 && (
                       <div className="next-session">
