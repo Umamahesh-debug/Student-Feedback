@@ -81,7 +81,7 @@ Frontend runs on: `http://localhost:3000`
 * ✅ View analytics & reports
 * ✅ Timetable
 * ✅ Generate PDF/Excel 
-* ✅ Verify certificates
+* ✅ Verify certificates 
 
 ### 🤖 AI Course Generation (Puter.com)
 
