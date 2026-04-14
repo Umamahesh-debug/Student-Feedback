@@ -55,32 +55,36 @@ router.post('/day', auth, isStudent, async (req, res) => {
       });
     }
 
-    // Prevent multiple ratings per student per day - allow update if exists (dayNumber stored as Number)
-    const existing = await DayRating.findOne({
-      student: req.user.userId,
-      course: courseId,
-      dayNumber: dayNum
-    });
-    if (existing) {
-      // Update existing rating
-      existing.rating = rating;
-      existing.comment = comment || '';
-      existing.updatedAt = new Date();
-      await existing.save();
-      return res.json(existing);
-    }
+    // Enforce one feedback per student/day/course and overwrite on resubmission.
+    const dr = await DayRating.findOneAndUpdate(
+      {
+        student: req.user.userId,
+        course: courseId,
+        dayNumber: dayNum
+      },
+      {
+        $set: {
+          rating,
+          comment: comment || ''
+        },
+        $setOnInsert: {
+          student: req.user.userId,
+          course: courseId,
+          dayNumber: dayNum
+        }
+      },
+      {
+        upsert: true,
+        new: true,
+        runValidators: true
+      }
+    );
 
-    const dr = new DayRating({
-      student: req.user.userId,
-      course: courseId,
-      dayNumber: dayNum,
-      rating,
-      comment: comment || ''
-    });
-    await dr.save();
-
-    res.status(201).json(dr);
+    res.status(200).json(dr);
   } catch (error) {
+    if (error && error.code === 11000) {
+      return res.status(409).json({ message: 'Feedback already submitted for this day. Please refresh and try again.' });
+    }
     console.error('Error saving day rating:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }

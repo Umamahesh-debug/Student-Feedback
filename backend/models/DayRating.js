@@ -31,4 +31,6 @@ const dayRatingSchema = new mongoose.Schema({
   }
 });
 
+dayRatingSchema.index({ student: 1, course: 1, dayNumber: 1 });
+
 module.exports = mongoose.model('DayRating', dayRatingSchema);

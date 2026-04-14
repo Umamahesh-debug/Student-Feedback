@@ -752,6 +752,17 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
     const attendance = await Attendance.find({ course: courseId }).sort({ dayNumber: 1 });
     const dayImages = await AttendanceDayImage.find({ course: courseId }).sort({ dayNumber: 1 });
     const dayRatings = await DayRating.find({ course: courseId }).populate('student', 'name');
+    const latestRatingByStudentDay = new Map();
+    dayRatings.forEach((rating) => {
+      const studentId = rating.student?._id?.toString() || rating.student?.toString();
+      if (!studentId) return;
+      const key = `${studentId}-${rating.dayNumber}`;
+      const existing = latestRatingByStudentDay.get(key);
+      if (!existing || new Date(rating.createdAt).getTime() >= new Date(existing.createdAt).getTime()) {
+        latestRatingByStudentDay.set(key, rating);
+      }
+    });
+    const uniqueDayRatings = Array.from(latestRatingByStudentDay.values());
     const evaluations = await Evaluation.find({ course: courseId });
 
     const evaluationQuestionConfig = [
@@ -781,7 +792,7 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
     for (let day = 1; day <= course.totalDays; day++) {
       const dayAtt = attendance.filter(a => a.dayNumber === day);
       const dayImg = dayImages.find(di => di.dayNumber === day);
-      const dayRats = dayRatings.filter(r => r.dayNumber === day);
+      const dayRats = uniqueDayRatings.filter(r => r.dayNumber === day);
 
       // Get section info from course.sections array
       const sectionInfo = course.sections && course.sections[day - 1] ? course.sections[day - 1] : null;
@@ -852,9 +863,9 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
       });
     }
 
-    const totalDayRatings = dayRatings.length;
+    const totalDayRatings = uniqueDayRatings.length;
     const overallDayRating = totalDayRatings > 0
-      ? parseFloat((dayRatings.reduce((sum, r) => sum + r.rating, 0) / totalDayRatings).toFixed(1))
+      ? parseFloat((uniqueDayRatings.reduce((sum, r) => sum + r.rating, 0) / totalDayRatings).toFixed(1))
       : 0;
 
     const questionPerformance = evaluationQuestionConfig.map((question) => {
@@ -939,7 +950,7 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
       dissatisfied: 0
     };
 
-    dayRatings.forEach((item) => {
+    uniqueDayRatings.forEach((item) => {
       const label = ReportInsightModel.sentimentLabel(item.rating);
       sentimentCounts[label] += 1;
     });
@@ -987,6 +998,7 @@ router.get('/course-full-report/:courseId', verifyAdmin, async (req, res) => {
       daysData,
       aiAnalysis: {
         totalFeedbacks: totalDayRatings,
+        totalStudents: enrollments.length,
         averageDayRating: overallDayRating,
         averageQuestionRating: overallQuestionRating,
         positivePercent,

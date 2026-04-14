@@ -118,6 +118,14 @@ const AdminDashboard = () => {
     setIsRealtime(prev => !prev);
   };
 
+  const getDayHeading = (dayNumber, sectionTitle) => {
+    const defaultDayLabel = `Day ${dayNumber}`;
+    if (!sectionTitle || sectionTitle.trim().toLowerCase() === defaultDayLabel.toLowerCase()) {
+      return defaultDayLabel;
+    }
+    return `${defaultDayLabel}: ${sectionTitle}`;
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -486,13 +494,12 @@ const AdminDashboard = () => {
           <div class="analysis-block">
             <table class="day-rating-table">
               <thead>
-                <tr><th>Day</th><th>Section</th><th>Ratings</th><th>Average</th></tr>
+                <tr><th>Day</th><th>Ratings</th><th>Average</th></tr>
               </thead>
               <tbody>
                 ${fullReportData.daysData.map(day => `
                   <tr>
                     <td>Day ${day.dayNumber}</td>
-                    <td>${day.sectionTitle}</td>
                     <td>${day.totalRatings}</td>
                     <td>${day.totalRatings > 0 ? `${day.avgRating}/5` : 'N/A'}</td>
                   </tr>
@@ -505,7 +512,7 @@ const AdminDashboard = () => {
         ${fullReportData.daysData.map(day => `
           <div class="day-section">
             <div class="day-header">
-              <h2>Day ${day.dayNumber}: ${day.sectionTitle}</h2>
+              <h2>${getDayHeading(day.dayNumber, day.sectionTitle)}</h2>
               <div class="day-meta">${day.sectionDescription || ''}</div>
             </div>
             <div class="day-content">
@@ -554,7 +561,7 @@ const AdminDashboard = () => {
           <div class="analysis-section">
             <div class="analysis-title">AI-Powered Feedback Analysis</div>
             <div class="analysis-stats">
-              <div class="analysis-stat"><div class="value">${fullReportData.aiAnalysis.totalFeedbacks || 0}</div><div class="label">Total Feedbacks</div></div>
+              <div class="analysis-stat"><div class="value">${fullReportData.aiAnalysis.totalStudents || fullReportData.totalStudents || 0}</div><div class="label">Total No. of Students</div></div>
               <div class="analysis-stat"><div class="value">${fullReportData.aiAnalysis.averageQuestionRating > 0 ? `${fullReportData.aiAnalysis.averageQuestionRating}/5` : 'N/A'}</div><div class="label">Overall Questions Rating</div></div>
               <div class="analysis-stat"><div class="value">${fullReportData.aiAnalysis.averageDayRating > 0 ? `${fullReportData.aiAnalysis.averageDayRating}★` : 'N/A'}</div><div class="label">Average Day Rating</div></div>
               <div class="analysis-stat"><div class="value">${fullReportData.aiAnalysis.positivePercent || 0}%</div><div class="label">Positive</div></div>
@@ -1717,7 +1724,6 @@ const AdminDashboard = () => {
                             <thead>
                               <tr>
                                 <th>Day</th>
-                                <th>Section</th>
                                 <th>Ratings</th>
                                 <th>Average</th>
                               </tr>
@@ -1726,7 +1732,6 @@ const AdminDashboard = () => {
                               {fullReportData.daysData.map((day) => (
                                 <tr key={`summary-${day.dayNumber}`}>
                                   <td>Day {day.dayNumber}</td>
-                                  <td>{day.sectionTitle}</td>
                                   <td>{day.totalRatings}</td>
                                   <td>{day.totalRatings > 0 ? `${day.avgRating}/5` : 'N/A'}</td>
                                 </tr>
@@ -1747,7 +1752,7 @@ const AdminDashboard = () => {
                           onClick={() => setFullReportExpandedDay(fullReportExpandedDay === day.dayNumber ? null : day.dayNumber)}
                         >
                           <div className="fr-day-info">
-                            <h3>Day {day.dayNumber}: {day.sectionTitle}</h3>
+                            <h3>{getDayHeading(day.dayNumber, day.sectionTitle)}</h3>
                             {day.sectionDescription && <p className="fr-day-desc">{day.sectionDescription}</p>}
                           </div>
                           <div className="fr-day-stats">
@@ -1870,8 +1875,8 @@ const AdminDashboard = () => {
                           <div className="fr-day-body">
                             <div className="fr-stats-row">
                               <div className="fr-stat-card total">
-                                <div className="fr-stat-value">{fullReportData.aiAnalysis.totalFeedbacks || 0}</div>
-                                <div className="fr-stat-label">Total Feedbacks</div>
+                                <div className="fr-stat-value">{fullReportData.aiAnalysis.totalStudents || fullReportData.totalStudents || 0}</div>
+                                <div className="fr-stat-label">Total No. of Students</div>
                               </div>
                               <div className="fr-stat-card rating">
                                 <div className="fr-stat-value">{fullReportData.aiAnalysis.averageDayRating > 0 ? `${fullReportData.aiAnalysis.averageDayRating}★` : 'N/A'}</div>
@@ -1945,8 +1950,8 @@ const AdminDashboard = () => {
                                 <div className="fr-stat-label">Accuracy of Naive Bayes</div>
                               </div>
                               <div className="fr-stat-card total">
-                                <div className="fr-stat-value">{fullReportData.aiAnalysis.sentimentDistribution?.total || 0}</div>
-                                <div className="fr-stat-label">Total Rated Signals</div>
+                                <div className="fr-stat-value">{fullReportData.aiAnalysis.totalStudents || fullReportData.totalStudents || 0}</div>
+                                <div className="fr-stat-label">Total No. of Students</div>
                               </div>
                             </div>
 
@@ -2139,7 +2144,7 @@ const AdminDashboard = () => {
                               <div className={`att-reports-day-card ${attReportExpandedDay === day.dayNumber ? 'expanded' : ''}`} key={day.dayNumber}>
                                 <div className="att-reports-day-header" onClick={() => setAttReportExpandedDay(attReportExpandedDay === day.dayNumber ? null : day.dayNumber)}>
                                   <div className="att-reports-day-info">
-                                    <strong>Day {day.dayNumber}: {day.sectionTitle}</strong>
+                                    <strong>{getDayHeading(day.dayNumber, day.sectionTitle)}</strong>
                                     <div className="att-reports-day-stats">
                                       <span className="att-stat-present">✅ {day.presentCount}</span>
                                       <span className="att-stat-absent">❌ {day.absentCount}</span>
