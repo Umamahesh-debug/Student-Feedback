@@ -719,7 +719,7 @@ const Documentation = () => {
           <div className="api-section">
             <h3>Base URL</h3>
             <div className="code-block">
-              <code>https://your-backend-url.onrender.com/api</code>
+              <code>/api</code>
             </div>
 
             <h3>Authentication</h3>
