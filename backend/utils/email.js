@@ -1,19 +1,26 @@
 const nodemailer = require('nodemailer');
 
+const EMAIL_USER = process.env.EMAIL_USER || process.env.SMTP_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
   secure: false,
   family: 4,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    user: EMAIL_USER,
+    pass: EMAIL_PASS
   }
 });
 
 const sendOTPEmail = async (toEmail, userName, otp) => {
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    throw new Error('Email credentials are not configured (EMAIL_USER/EMAIL_PASS).');
+  }
+
   const mailOptions = {
-    from: `"Student Feedback System" <${process.env.EMAIL_USER || 'vagtraining2026@gmail.com'}>`,
+    from: `"Student Feedback System" <${EMAIL_USER}>`,
     to: toEmail,
     subject: 'Your Email Verification OTP',
     html: `
@@ -45,8 +52,12 @@ const sendOTPEmail = async (toEmail, userName, otp) => {
 };
 
 const sendPasswordResetOTPEmail = async (toEmail, userName, otp) => {
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    throw new Error('Email credentials are not configured (EMAIL_USER/EMAIL_PASS).');
+  }
+
   const mailOptions = {
-    from: `"Student Feedback System" <${process.env.EMAIL_USER || 'vagtraining2026@gmail.com'}>`,
+    from: `"Student Feedback System" <${EMAIL_USER}>`,
     to: toEmail,
     subject: 'Password Reset OTP',
     html: `
