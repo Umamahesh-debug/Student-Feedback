@@ -8,6 +8,33 @@ dotenv.config();
 const app = express();
 let cachedConnection = null;
 
+const validateRequiredEnv = () => {
+  const missing = [];
+
+  if (!process.env.JWT_SECRET) {
+    missing.push('JWT_SECRET');
+  }
+
+  const hasEmailUser = Boolean(process.env.EMAIL_USER || process.env.SMTP_USER);
+  const hasEmailPass = Boolean(process.env.EMAIL_PASS || process.env.SMTP_PASS);
+
+  if (!hasEmailUser) {
+    missing.push('EMAIL_USER or SMTP_USER');
+  }
+
+  if (!hasEmailPass) {
+    missing.push('EMAIL_PASS or SMTP_PASS');
+  }
+
+  if (missing.length > 0) {
+    console.error('Missing required environment variables:');
+    missing.forEach((key) => console.error(`- ${key}`));
+    return false;
+  }
+
+  return true;
+};
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -59,6 +86,10 @@ app.use('/api/admin', require('./routes/admin'));
 
 const PORT = process.env.PORT || 5000;
 if (require.main === module) {
+  if (!validateRequiredEnv()) {
+    process.exit(1);
+  }
+
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
