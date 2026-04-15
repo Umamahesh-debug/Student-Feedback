@@ -14,6 +14,35 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+const fallbackTransporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  family: 4,
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS
+  }
+});
+
+const sendMailWithFallback = async (mailOptions) => {
+  try {
+    return await transporter.sendMail(mailOptions);
+  } catch (primaryError) {
+    const retryableCodes = new Set(['ENETUNREACH', 'ETIMEDOUT', 'ECONNRESET', 'ESOCKET']);
+    const shouldRetry = retryableCodes.has(primaryError.code);
+
+    if (!shouldRetry) {
+      throw primaryError;
+    }
+
+    console.error(
+      `Primary SMTP failed (${primaryError.code}). Retrying with secure SMTP on port 465.`
+    );
+    return fallbackTransporter.sendMail(mailOptions);
+  }
+};
+
 const sendOTPEmail = async (toEmail, userName, otp) => {
   if (!EMAIL_USER || !EMAIL_PASS) {
     throw new Error('Email credentials are not configured (EMAIL_USER/EMAIL_PASS).');
@@ -48,7 +77,7 @@ const sendOTPEmail = async (toEmail, userName, otp) => {
       </div>
     `
   };
-  await transporter.sendMail(mailOptions);
+  await sendMailWithFallback(mailOptions);
 };
 
 const sendPasswordResetOTPEmail = async (toEmail, userName, otp) => {
@@ -85,7 +114,7 @@ const sendPasswordResetOTPEmail = async (toEmail, userName, otp) => {
       </div>
     `
   };
-  await transporter.sendMail(mailOptions);
+  await sendMailWithFallback(mailOptions);
 };
 
 module.exports = { sendOTPEmail, sendPasswordResetOTPEmail };
